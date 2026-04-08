@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch Übung: Gendersortierung</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+            --success-color: #27ae60;
+            --error-color: #e74c3c;
+            --solve-color: #34495e;
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--primary-color);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+        }
+
+        .instruction {
+            text-align: center;
+            margin-bottom: 20px;
+            max-width: 600px;
+            line-height: 1.4;
+        }
+
+        #word-pool {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 30px;
+            min-height: 60px;
+            width: 100%;
+            max-width: 800px;
+        }
+
+        .word-card {
+            background-color: var(--card-bg);
+            border: 2px solid var(--accent-color);
+            border-radius: 8px;
+            padding: 12px 20px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: transform 0.2s, background-color 0.2s;
+            user-select: none;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .word-card.selected {
+            background-color: var(--accent-color);
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .baskets-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            width: 100%;
+            max-width: 900px;
+            flex-wrap: wrap;
+        }
+
+        .basket {
+            flex: 1;
+            min-width: 250px;
+            background-color: #ecf0f1;
+            border: 3px dashed #bdc3c7;
+            border-radius: 15px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 200px;
+            transition: border-color 0.3s, background-color 0.3s;
+        }
+
+        .basket.highlight {
+            border-color: var(--accent-color);
+            background-color: #d6eaf8;
+        }
+
+        .basket h2 {
+            margin-top: 0;
+            color: var(--accent-color);
+            font-size: 1.8rem;
+        }
+
+        .basket-items {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .placed-word {
+            background-color: var(--success-color);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 5px;
+            font-size: 1rem;
+            animation: popIn 0.3s ease-out;
+        }
+
+        .solved-word {
+            background-color: var(--solve-color);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .shake {
+            animation: shake 0.4s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        .controls {
+            margin-top: 30px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        button {
+            padding: 12px 25px;
+            font-size: 1rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            color: white;
+        }
+
+        #solve-btn { background-color: var(--solve-color); }
+        #reset-btn { background-color: var(--accent-color); }
+        
+        button:hover { opacity: 0.9; }
+
+        @media (max-width: 600px) {
+            .baskets-container { flex-direction: column; }
+            .basket { min-width: 100%; min-height: 150px; }
+        }
+
+        #message {
+            margin-top: 20px;
+            font-weight: bold;
+            min-height: 24px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Russische Zahlwörter: eins</h1>
+    <p class="instruction">
+        Wähle ein Wort aus und klicke dann auf den passenden Korb (один, одна oder одно).
+    </p>
+
+    <div id="word-pool"></div>
+
+    <div class="baskets-container">
+        <div class="basket" data-gender="m" onclick="handleBasketClick(this)">
+            <h2>один</h2>
+            <div class="basket-items" id="items-m"></div>
+        </div>
+        <div class="basket" data-gender="f" onclick="handleBasketClick(this)">
+            <h2>одна</h2>
+            <div class="basket-items" id="items-f"></div>
+        </div>
+        <div class="basket" data-gender="n" onclick="handleBasketClick(this)">
+            <h2>одно</h2>
+            <div class="basket-items" id="items-n"></div>
+        </div>
+    </div>
+
+    <div id="message"></div>
+
+    <div class="controls">
+        <button id="solve-btn" onclick="showSolution()">Lösung anzeigen</button>
+        <button id="reset-btn" onclick="resetGame()">Neu starten</button>
+    </div>
+
+    <script>
+        const words = [
+            { text: "стул", gender: "m" },
+            { text: "книга", gender: "f" },
+            { text: "окно", gender: "n" },
+            { text: "телефон", gender: "m" },
+            { text: "сумка", gender: "f" },
+            { text: "яблоко", gender: "n" },
+            { text: "урок", gender: "m" },
+            { text: "история", gender: "f" },
+            { text: "задание", gender: "n" },
+            { text: "город", gender: "m" },
+            { text: "ручка", gender: "f" },
+            { text: "видео", gender: "n" }
+        ];
+
+        let selectedWordElement = null;
+        let selectedWordData = null;
+        let correctCount = 0;
+
+        const wordPool = document.getElementById('word-pool');
+        const message = document.getElementById('message');
+        const solveBtn = document.getElementById('solve-btn');
+
+        function initGame() {
+            wordPool.innerHTML = '';
+            document.querySelectorAll('.basket-items').forEach(b => b.innerHTML = '');
+            message.textContent = '';
+            solveBtn.style.display = 'block';
+            correctCount = 0;
+            selectedWordElement = null;
+            selectedWordData = null;
+            
+            const shuffled = [...words].sort(() => Math.random() - 0.5);
+            
+            shuffled.forEach(word => {
+                const card = document.createElement('div');
+                card.className = 'word-card';
+                card.textContent = word.text;
+                card.onclick = (e) => selectWord(card, word, e);
+                wordPool.appendChild(card);
+            });
+        }
+
+        function selectWord(element, data, event) {
+            event.stopPropagation();
+            if (selectedWordElement) {
+                selectedWordElement.classList.remove('selected');
+            }
+            selectedWordElement = element;
+            selectedWordData = data;
+            element.classList.add('selected');
+            message.textContent = "Wähle nun den Korb für '" + data.text + "'";
+            message.style.color = "var(--accent-color)";
+        }
+
+        function handleBasketClick(basketElement) {
+            if (!selectedWordElement) return;
+
+            const targetGender = basketElement.getAttribute('data-gender');
+
+            if (selectedWordData.gender === targetGender) {
+                const placed = document.createElement('div');
+                placed.className = 'placed-word';
+                placed.textContent = selectedWordData.text;
+                document.getElementById(`items-${targetGender}`).appendChild(placed);
+                
+                selectedWordElement.style.display = 'none';
+                const wordToRemove = selectedWordData.text;
+                
+                selectedWordElement = null;
+                selectedWordData = null;
+                
+                message.textContent = "Richtig!";
+                message.style.color = "var(--success-color)";
+                correctCount++;
+
+                if (document.querySelectorAll('.word-card[style*="display: none"]').length === words.length) {
+                    message.textContent = "Hervorragend! Alles gelöst.";
+                    solveBtn.style.display = 'none';
+                }
+            } else {
+                basketElement.classList.add('shake');
+                setTimeout(() => basketElement.classList.remove('shake'), 400);
+                message.textContent = "Das passt leider nicht.";
+                message.style.color = "var(--error-color)";
+            }
+        }
+
+        function showSolution() {
+            const cards = document.querySelectorAll('.word-card');
+            cards.forEach(card => {
+                if (card.style.display !== 'none') {
+                    const wordData = words.find(w => w.text === card.textContent);
+                    const placed = document.createElement('div');
+                    placed.className = 'solved-word';
+                    placed.textContent = wordData.text;
+                    document.getElementById(`items-${wordData.gender}`).appendChild(placed);
+                    card.style.display = 'none';
+                }
+            });
+            
+            selectedWordElement = null;
+            selectedWordData = null;
+            message.textContent = "Lösung wird angezeigt.";
+            message.style.color = "var(--solve-color)";
+            solveBtn.style.display = 'none';
+        }
+
+        function resetGame() {
+            initGame();
+        }
+
+        document.body.onclick = () => {
+            if (selectedWordElement) {
+                selectedWordElement.classList.remove('selected');
+                selectedWordElement = null;
+                selectedWordData = null;
+                message.textContent = "";
+            }
+        };
+
+        initGame();
+    </script>
+</body>
+</html>
