@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch Übung: Duell der Zahlen</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-blue: #3498db;
+            --accent-purple: #9b59b6;
+            --success-color: #27ae60;
+            --error-color: #e74c3c;
+            --bg-color: #f4f7f6;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--primary-color);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            margin-bottom: 30px;
+            overflow: hidden;
+        }
+
+        #progress-fill {
+            height: 100%;
+            background: var(--accent-blue);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        /* Duell Bereich */
+        .duel-arena {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .fighter {
+            flex: 1;
+            min-width: 280px;
+            border: 3px solid #eee;
+            border-radius: 15px;
+            padding: 20px;
+            transition: border-color 0.3s;
+            background: #fff;
+        }
+
+        .fighter-blue { border-color: var(--accent-blue); }
+        .fighter-purple { border-color: var(--accent-purple); }
+
+        .number-box {
+            font-size: 3.5rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        .fighter-blue .number-box { color: var(--accent-blue); }
+        .fighter-purple .number-box { color: var(--accent-purple); }
+
+        .options-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .option-btn {
+            padding: 12px;
+            font-size: 1.2rem;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: bold;
+        }
+
+        .option-btn:hover:not(:disabled) {
+            background: #f8f9fa;
+            border-color: var(--primary-color);
+        }
+
+        .option-btn.selected-correct {
+            background-color: var(--success-color) !important;
+            color: white;
+            border-color: var(--success-color);
+        }
+
+        .option-btn.selected-wrong {
+            background-color: var(--error-color) !important;
+            color: white;
+            border-color: var(--error-color);
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .btn-action {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            color: white;
+            width: 100%;
+            max-width: 250px;
+        }
+
+        #solve-btn { background-color: #7f8c8d; }
+        #next-btn { background-color: var(--accent-blue); display: none; }
+
+        #feedback {
+            margin-top: 15px;
+            font-weight: bold;
+            min-height: 24px;
+        }
+
+        #result-screen { display: none; }
+        .final-score { font-size: 3rem; color: var(--accent-blue); margin: 20px 0; }
+
+        @media (max-width: 600px) {
+            .duel-arena { flex-direction: column; }
+            .fighter { min-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container" id="quiz-ui">
+        <h1>„Duell der Zahlen“</h1>
+        <p>Wähle für beide Zahlen die richtige Substantiv-Form!</p>
+        
+        <div class="progress-bar">
+            <div id="progress-fill"></div>
+        </div>
+
+        <div id="feedback"></div>
+
+        <div class="duel-arena">
+            <!-- Linker Kämpfer (2, 3, 4) -->
+            <div class="fighter fighter-blue" id="fighter-left">
+                <div class="number-box" id="num-left">4</div>
+                <div class="options-list" id="opts-left"></div>
+            </div>
+
+            <!-- Rechter Kämpfer (12, 13, 14) -->
+            <div class="fighter fighter-purple" id="fighter-right">
+                <div class="number-box" id="num-right">14</div>
+                <div class="options-list" id="opts-right"></div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button id="solve-btn" class="btn-action" onclick="showSolution()">Lösung anzeigen</button>
+            <button id="next-btn" class="btn-action" onclick="nextDuel()">Nächstes Duell</button>
+        </div>
+    </div>
+
+    <div class="container" id="result-screen">
+        <h1>Ergebnis</h1>
+        <p>Du hast das Duell beendet!</p>
+        <div class="final-score" id="score-display">0 / 6</div>
+        <button class="btn-action" style="background-color: var(--primary-color);" onclick="resetGame()">Neu starten</button>
+    </div>
+
+    <script>
+        const duelData = [
+            { 
+                left: { num: "4", correct: "стула", options: ["стула", "стульев"] },
+                right: { num: "14", correct: "стульев", options: ["стула", "стульев"] }
+            },
+            { 
+                left: { num: "2", correct: "книги", options: ["книги", "книг"] },
+                right: { num: "12", correct: "книг", options: ["книги", "книг"] }
+            },
+            { 
+                left: { num: "3", correct: "окна", options: ["окна", "окон"] },
+                right: { num: "13", correct: "окон", options: ["окна", "окон"] }
+            },
+            { 
+                left: { num: "2", correct: "друга", options: ["друга", "друзей"] },
+                right: { num: "12", correct: "друзей", options: ["друга", "друзей"] }
+            },
+            { 
+                left: { num: "4", correct: "яблока", options: ["яблока", "яблок"] },
+                right: { num: "14", correct: "яблок", options: ["яблока", "яблок"] }
+            },
+            { 
+                left: { num: "3", correct: "урока", options: ["урока", "уроков"] },
+                right: { num: "13", correct: "уроков", options: ["урока", "уроков"] }
+            }
+        ];
+
+        let currentIndex = 0;
+        let score = 0;
+        let leftAnswered = false;
+        let rightAnswered = false;
+        let currentRoundMistake = false;
+
+        function loadDuel() {
+            const data = duelData[currentIndex];
+            leftAnswered = false;
+            rightAnswered = false;
+            currentRoundMistake = false;
+
+            document.getElementById('num-left').textContent = data.left.num;
+            document.getElementById('num-right').textContent = data.right.num;
+            document.getElementById('feedback').textContent = "";
+            document.getElementById('next-btn').style.display = "none";
+            document.getElementById('solve-btn').style.display = "block";
+
+            renderOptions('opts-left', data.left, 'left');
+            renderOptions('opts-right', data.right, 'right');
+            updateProgress();
+        }
+
+        function renderOptions(containerId, sideData, sideKey) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = "";
+            sideData.options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.textContent = opt;
+                btn.onclick = () => checkSide(btn, opt, sideData.correct, sideKey);
+                container.appendChild(btn);
+            });
+        }
+
+        function checkSide(btn, choice, correct, sideKey) {
+            if (sideKey === 'left' && leftAnswered) return;
+            if (sideKey === 'right' && rightAnswered) return;
+
+            if (choice === correct) {
+                btn.classList.add('selected-correct');
+                if (sideKey === 'left') leftAnswered = true;
+                if (sideKey === 'right') rightAnswered = true;
+                
+                checkDuelComplete();
+            } else {
+                btn.classList.add('selected-wrong');
+                currentRoundMistake = true;
+                document.getElementById('feedback').textContent = "Überlege noch einmal!";
+                document.getElementById('feedback').style.color = "var(--error-color)";
+            }
+        }
+
+        function checkDuelComplete() {
+            if (leftAnswered && rightAnswered) {
+                if (!currentRoundMistake) score++;
+                document.getElementById('feedback').textContent = "Duell gewonnen!";
+                document.getElementById('feedback').style.color = "var(--success-color)";
+                document.getElementById('solve-btn').style.display = "none";
+                document.getElementById('next-btn').style.display = "block";
+                
+                // Alle Buttons deaktivieren
+                document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
+            }
+        }
+
+        function showSolution() {
+            const data = duelData[currentIndex];
+            currentRoundMistake = true; // Keine Punkte mehr möglich
+
+            // Links lösen
+            document.querySelectorAll('#opts-left .option-btn').forEach(btn => {
+                if (btn.textContent === data.left.correct) btn.classList.add('selected-correct');
+                btn.disabled = true;
+            });
+            // Rechts lösen
+            document.querySelectorAll('#opts-right .option-btn').forEach(btn => {
+                if (btn.textContent === data.right.correct) btn.classList.add('selected-correct');
+                btn.disabled = true;
+            });
+
+            leftAnswered = true;
+            rightAnswered = true;
+            checkDuelComplete();
+        }
+
+        function nextDuel() {
+            currentIndex++;
+            if (currentIndex < duelData.length) {
+                loadDuel();
+            } else {
+                showFinalResult();
+            }
+        }
+
+        function showFinalResult() {
+            document.getElementById('quiz-ui').style.display = 'none';
+            document.getElementById('result-screen').style.display = 'block';
+            document.getElementById('score-display').textContent = `${score} / ${duelData.length}`;
+        }
+
+        function resetGame() {
+            currentIndex = 0;
+            score = 0;
+            document.getElementById('quiz-ui').style.display = 'block';
+            document.getElementById('result-screen').style.display = 'none';
+            loadDuel();
+        }
+
+        function updateProgress() {
+            const percent = (currentIndex / duelData.length) * 100;
+            document.getElementById('progress-fill').style.width = percent + "%";
+        }
+
+        loadDuel();
+    </script>
+</body>
+</html>
