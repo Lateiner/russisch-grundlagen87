@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch Übung: Zahlenstrahl-Zuordnung</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+            --gen-sing-color: #e67e22; /* Orange für 2-4 */
+            --gen-plur-color: #9b59b6; /* Lila für 5-20 */
+            --success-color: #27ae60;
+            --error-color: #e74c3c;
+            --bg-color: #f8f9fa;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--primary-color);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background: white;
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        h1 { font-size: 1.5rem; margin-bottom: 10px; }
+        .instruction { color: #666; margin-bottom: 30px; }
+
+        /* Wort-Pool */
+        #word-pool {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 40px;
+            min-height: 100px;
+            padding: 15px;
+            border: 2px dashed #ddd;
+            border-radius: 15px;
+        }
+
+        .word-card {
+            background: white;
+            border: 2px solid var(--accent-color);
+            padding: 10px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: bold;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .word-card.selected {
+            background-color: var(--accent-color);
+            color: white;
+            transform: scale(1.1);
+        }
+
+        /* Zahlenstrahl Design */
+        .timeline-container {
+            position: relative;
+            margin: 60px 0 120px 0;
+            padding: 0 20px;
+        }
+
+        .timeline-line {
+            height: 4px;
+            background: #bdc3c7;
+            width: 100%;
+            position: relative;
+            border-radius: 2px;
+        }
+
+        /* Zonen auf dem Strahl */
+        .zones-wrapper {
+            display: flex;
+            justify-content: space-between;
+            margin-top: -50px;
+        }
+
+        .zone {
+            width: 45%;
+            min-height: 150px;
+            border-radius: 15px;
+            padding: 15px;
+            transition: transform 0.2s, background-color 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .zone-2-4 { 
+            border: 3px solid var(--gen-sing-color); 
+            background-color: #fffaf5;
+        }
+        .zone-5-20 { 
+            border: 3px solid var(--gen-plur-color); 
+            background-color: #fafaff;
+        }
+
+        .zone:hover { transform: translateY(-5px); }
+        .zone.highlight { background-color: #ecf0f1; border-style: dotted; }
+
+        .zone-label {
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+        }
+
+        .zone-2-4 .zone-label { color: var(--gen-sing-color); }
+        .zone-5-20 .zone-label { color: var(--gen-plur-color); }
+
+        .placed-words {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            justify-content: center;
+        }
+
+        .placed-tag {
+            background: #2c3e50;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            animation: pop 0.3s ease-out;
+        }
+
+        @keyframes pop {
+            0% { transform: scale(0); }
+            100% { transform: scale(1); }
+        }
+
+        /* Marker auf dem Strahl */
+        .marker {
+            position: absolute;
+            top: 46px;
+            width: 2px;
+            height: 15px;
+            background: #7f8c8d;
+        }
+        .marker-label {
+            position: absolute;
+            top: 65px;
+            transform: translateX(-50%);
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        /* Controls */
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            color: white;
+            transition: opacity 0.2s;
+        }
+
+        #solve-btn { background-color: #7f8c8d; }
+        #reset-btn { background-color: var(--accent-color); }
+        
+        #message {
+            margin-top: 15px;
+            font-weight: bold;
+            min-height: 24px;
+        }
+
+        @media (max-width: 600px) {
+            .zones-wrapper { flex-direction: column; gap: 40px; margin-top: 20px; }
+            .zone { width: 100%; min-height: 100px; }
+            .timeline-container { display: none; } /* Verstecke Strahl auf Handy für Platz */
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Zahlenstrahl-Zuordnung</h1>
+        <p class="instruction">
+            Klicke ein Wort an und weise es der richtigen Gruppe zu:<br>
+            <b>2–4</b> (Genitiv Singular) oder <b>5–20</b> (Genitiv Plural).
+        </p>
+
+        <div id="word-pool"></div>
+
+        <div class="timeline-container">
+            <div class="timeline-line"></div>
+            <!-- Marker -->
+            <div class="marker" style="left: 0%;"></div><div class="marker-label" style="left: 0%;">0</div>
+            <div class="marker" style="left: 10%;"></div><div class="marker-label" style="left: 10%;">1</div>
+            <div class="marker" style="left: 20%;"></div><div class="marker-label" style="left: 20%;">2</div>
+            <div class="marker" style="left: 40%;"></div><div class="marker-label" style="left: 40%;">4</div>
+            <div class="marker" style="left: 50%;"></div><div class="marker-label" style="left: 50%;">5</div>
+            <div class="marker" style="left: 100%;"></div><div class="marker-label" style="left: 100%;">20</div>
+        </div>
+
+        <div class="zones-wrapper">
+            <div class="zone zone-2-4" onclick="assignToZone('2-4')">
+                <div class="zone-label">Bereich 2 – 4</div>
+                <div class="placed-words" id="words-2-4"></div>
+            </div>
+            <div class="zone zone-5-20" onclick="assignToZone('5-20')">
+                <div class="zone-label">Bereich 5 – 20</div>
+                <div class="placed-words" id="words-5-20"></div>
+            </div>
+        </div>
+
+        <div id="message"></div>
+
+        <div class="controls">
+            <button id="solve-btn" onclick="showSolution()">Lösung anzeigen</button>
+            <button id="reset-btn" onclick="resetGame()">Neu starten</button>
+        </div>
+    </div>
+
+    <script>
+        const wordData = [
+            { text: "стула", type: "2-4" },
+            { text: "стульев", type: "5-20" },
+            { text: "книги", type: "2-4" },
+            { text: "книг", type: "5-20" },
+            { text: "окна", type: "2-4" },
+            { text: "окон", type: "5-20" },
+            { text: "яблока", type: "2-4" },
+            { text: "яблок", type: "5-20" },
+            { text: "друзей", type: "5-20" },
+            { text: "подруг", type: "5-20" },
+            { text: "брата", type: "2-4" },
+            { text: "братьев", type: "5-20" },
+            { text: "города", type: "2-4" },
+            { text: "домов", type: "5-20" }
+        ];
+
+        let selectedWordObj = null;
+        let selectedElement = null;
+        let correctCount = 0;
+
+        function initGame() {
+            const pool = document.getElementById('word-pool');
+            pool.innerHTML = '';
+            document.getElementById('words-2-4').innerHTML = '';
+            document.getElementById('words-5-20').innerHTML = '';
+            document.getElementById('message').textContent = '';
+            document.getElementById('solve-btn').style.display = 'inline-block';
+            correctCount = 0;
+            selectedWordObj = null;
+            selectedElement = null;
+
+            // Wörter mischen
+            const shuffled = [...wordData].sort(() => Math.random() - 0.5);
+
+            shuffled.forEach(data => {
+                const card = document.createElement('div');
+                card.className = 'word-card';
+                card.textContent = data.text;
+                card.onclick = (e) => {
+                    e.stopPropagation();
+                    selectWord(card, data);
+                };
+                pool.appendChild(card);
+            });
+        }
+
+        function selectWord(el, data) {
+            if (selectedElement) selectedElement.classList.remove('selected');
+            selectedElement = el;
+            selectedWordObj = data;
+            el.classList.add('selected');
+            document.getElementById('message').textContent = `Wähle eine Zone für "${data.text}"`;
+            document.getElementById('message').style.color = "var(--accent-color)";
+        }
+
+        function assignToZone(zoneType) {
+            if (!selectedWordObj) return;
+
+            if (selectedWordObj.type === zoneType) {
+                // Richtig
+                const tag = document.createElement('div');
+                tag.className = 'placed-tag';
+                tag.textContent = selectedWordObj.text;
+                document.getElementById(`words-${zoneType}`).appendChild(tag);
+                
+                selectedElement.style.display = 'none';
+                selectedWordObj = null;
+                selectedElement = null;
+                correctCount++;
+                
+                document.getElementById('message').textContent = "Richtig!";
+                document.getElementById('message').style.color = "var(--success-color)";
+
+                if (correctCount === wordData.length) {
+                    document.getElementById('message').textContent = "Hervorragend! Alles richtig zugeordnet.";
+                    document.getElementById('solve-btn').style.display = 'none';
+                }
+            } else {
+                // Falsch
+                document.getElementById('message').textContent = "Das ist die falsche Gruppe. Überlege noch einmal!";
+                document.getElementById('message').style.color = "var(--error-color)";
+                
+                // Kurzer Shake-Effekt für die Zone
+                const zoneEl = document.querySelector(`.zone-${zoneType}`);
+                zoneEl.style.transform = "translateX(10px)";
+                setTimeout(() => zoneEl.style.transform = "translateX(0)", 100);
+            }
+        }
+
+        function showSolution() {
+            const poolCards = document.querySelectorAll('.word-card');
+            poolCards.forEach(card => {
+                if (card.style.display !== 'none') {
+                    const data = wordData.find(w => w.text === card.textContent);
+                    const tag = document.createElement('div');
+                    tag.className = 'placed-tag';
+                    tag.style.backgroundColor = "#7f8c8d";
+                    tag.textContent = data.text;
+                    document.getElementById(`words-${data.type}`).appendChild(tag);
+                    card.style.display = 'none';
+                }
+            });
+            document.getElementById('message').textContent = "Lösung angezeigt.";
+            document.getElementById('message').style.color = "var(--primary-color)";
+            document.getElementById('solve-btn').style.display = 'none';
+        }
+
+        function resetGame() {
+            initGame();
+        }
+
+        // Klick auf Hintergrund hebt Auswahl auf
+        document.addEventListener('click', () => {
+            if (selectedElement) {
+                selectedElement.classList.remove('selected');
+                selectedElement = null;
+                selectedWordObj = null;
+                document.getElementById('message').textContent = '';
+            }
+        });
+
+        initGame();
+    </script>
+</body>
+</html>
