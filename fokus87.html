@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch Übung: Fokus-Klick</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+            --success-color: #27ae60;
+            --error-color: #e74c3c;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--primary-color);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        h1 { font-size: 1.5rem; margin-bottom: 10px; }
+        .description { color: #666; margin-bottom: 30px; line-height: 1.4; }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            margin-bottom: 40px;
+            overflow: hidden;
+        }
+
+        #progress-fill {
+            height: 100%;
+            background: var(--accent-color);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        /* Zahlen-Anzeige */
+        .number-display {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 40px;
+            flex-wrap: wrap;
+        }
+
+        .digit-btn {
+            font-size: 3rem;
+            font-weight: bold;
+            padding: 10px 20px;
+            border: 2px solid #ddd;
+            border-radius: 12px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-width: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .digit-btn:hover:not(:disabled) {
+            border-color: var(--accent-color);
+            background-color: #f0f7ff;
+        }
+
+        .digit-btn.selected-correct {
+            background-color: var(--success-color) !important;
+            border-color: var(--success-color) !important;
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .digit-btn.selected-wrong {
+            background-color: var(--error-color) !important;
+            border-color: var(--error-color) !important;
+            color: white;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .btn-action {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            max-width: 250px;
+            color: white;
+        }
+
+        #solve-btn { background-color: #7f8c8d; }
+        #next-btn { background-color: var(--accent-color); display: none; }
+
+        #feedback {
+            margin-bottom: 20px;
+            font-weight: bold;
+            min-height: 24px;
+        }
+
+        #result-screen { display: none; }
+        .final-score { font-size: 3rem; color: var(--accent-color); margin: 20px 0; }
+
+        @media (max-width: 480px) {
+            .digit-btn { font-size: 2.2rem; padding: 8px 15px; min-width: 50px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container" id="quiz-ui">
+        <h1>Fokus-Klick</h1>
+        <p class="description">
+            Klicke auf die Ziffer, die darüber entscheidet, welche Form das Substantiv bekommt.
+        </p>
+        
+        <div class="progress-bar">
+            <div id="progress-fill"></div>
+        </div>
+
+        <div id="feedback"></div>
+
+        <div class="number-display" id="number-container">
+            <!-- Ziffern werden hier eingefügt -->
+        </div>
+
+        <div class="controls">
+            <button id="solve-btn" class="btn-action" onclick="showSolution()">Lösung anzeigen</button>
+            <button id="next-btn" class="btn-action" onclick="nextQuestion()">Nächste Zahl</button>
+        </div>
+    </div>
+
+    <div class="container" id="result-screen">
+        <h1>Ergebnis</h1>
+        <p>Du hast alle Zahlen analysiert!</p>
+        <div class="final-score" id="score-display">0 / 10</div>
+        <button class="btn-action" style="background-color: var(--primary-color);" onclick="resetGame()">Neu starten</button>
+    </div>
+
+    <script>
+        const quizData = [
+            { num: "154", correctIndices: [2] }, // Die 4
+            { num: "21", correctIndices: [1] },  // Die 1
+            { num: "1005", correctIndices: [3] },// Die 5
+            { num: "32", correctIndices: [1] },  // Die 2
+            { num: "11", correctIndices: [0, 1] }, // Die ganze 11 (Ausnahme!)
+            { num: "214", correctIndices: [1, 2] },// Die 14 (Ausnahme!)
+            { num: "88", correctIndices: [1] },  // Die 8
+            { num: "101", correctIndices: [2] }, // Die 1
+            { num: "513", correctIndices: [1, 2] },// Die 13 (Ausnahme!)
+            { num: "10", correctIndices: [1] }   // Die 0
+        ];
+
+        let currentIndex = 0;
+        let score = 0;
+        let answered = false;
+        let firstTry = true;
+
+        function loadQuestion() {
+            const data = quizData[currentIndex];
+            answered = false;
+            firstTry = true;
+            
+            document.getElementById('feedback').textContent = "";
+            document.getElementById('next-btn').style.display = "none";
+            document.getElementById('solve-btn').style.display = "block";
+            
+            const container = document.getElementById('number-container');
+            container.innerHTML = "";
+
+            // Zahl in Ziffern zerlegen
+            const digits = data.num.split('');
+            digits.forEach((digit, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'digit-btn';
+                btn.textContent = digit;
+                btn.onclick = () => checkDigit(btn, index);
+                container.appendChild(btn);
+            });
+
+            updateProgress();
+        }
+
+        function checkDigit(btn, index) {
+            if (answered) return;
+            
+            const data = quizData[currentIndex];
+            const isCorrect = data.correctIndices.includes(index);
+
+            if (isCorrect) {
+                // Alle korrekten Ziffern hervorheben (wichtig für 11-14)
+                const allBtns = document.querySelectorAll('.digit-btn');
+                data.correctIndices.forEach(idx => {
+                    allBtns[idx].classList.add('selected-correct');
+                });
+
+                if (firstTry) score++;
+                document.getElementById('feedback').textContent = "Richtig! Dieser Teil bestimmt den Fall.";
+                document.getElementById('feedback').style.color = "var(--success-color)";
+                endQuestion();
+            } else {
+                btn.classList.add('selected-wrong');
+                firstTry = false;
+                document.getElementById('feedback').textContent = "Nein, diese Ziffer ist nicht entscheidend.";
+                document.getElementById('feedback').style.color = "var(--error-color)";
+            }
+        }
+
+        function endQuestion() {
+            answered = true;
+            document.querySelectorAll('.digit-btn').forEach(btn => btn.disabled = true);
+            document.getElementById('solve-btn').style.display = "none";
+            document.getElementById('next-btn').style.display = "block";
+        }
+
+        function showSolution() {
+            const data = quizData[currentIndex];
+            const allBtns = document.querySelectorAll('.digit-btn');
+            
+            firstTry = false;
+            data.correctIndices.forEach(idx => {
+                allBtns[idx].classList.add('selected-correct');
+            });
+            
+            document.getElementById('feedback').textContent = "Die markierte Stelle ist entscheidend.";
+            document.getElementById('feedback').style.color = "var(--primary-color)";
+            endQuestion();
+        }
+
+        function nextQuestion() {
+            currentIndex++;
+            if (currentIndex < quizData.length) {
+                loadQuestion();
+            } else {
+                showFinalResult();
+            }
+        }
+
+        function showFinalResult() {
+            document.getElementById('quiz-ui').style.display = 'none';
+            document.getElementById('result-screen').style.display = 'block';
+            document.getElementById('score-display').textContent = `${score} / ${quizData.length}`;
+        }
+
+        function resetGame() {
+            currentIndex = 0;
+            score = 0;
+            document.getElementById('quiz-ui').style.display = 'block';
+            document.getElementById('result-screen').style.display = 'none';
+            loadQuestion();
+        }
+
+        function updateProgress() {
+            const percent = (currentIndex / quizData.length) * 100;
+            document.getElementById('progress-fill').style.width = percent + "%";
+        }
+
+        loadQuestion();
+    </script>
+</body>
+</html>
