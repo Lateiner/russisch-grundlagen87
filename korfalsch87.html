@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch Übung: Swipe-Challenge Korrigiert</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+            --success-color: #2ecc71;
+            --error-color: #e74c3c;
+            --bg-color: #f0f2f5;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        .header {
+            position: absolute;
+            top: 20px;
+            text-align: center;
+            width: 100%;
+        }
+
+        .score-board { font-weight: bold; font-size: 1.1rem; color: var(--primary-color); }
+
+        .game-container {
+            position: relative;
+            width: 300px;
+            height: 400px;
+            perspective: 1200px; /* Tiefe für den Flip */
+        }
+
+        /* Die innere Box, die sich dreht */
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+        }
+
+        .card-inner.is-flipped {
+            transform: rotateY(180deg);
+        }
+
+        /* Vorder- und Rückseite */
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            padding: 25px;
+            box-sizing: border-box;
+            border: 2px solid #eee;
+        }
+
+        .card-back {
+            transform: rotateY(180deg);
+            background-color: #f8f9fa;
+        }
+
+        .phrase { font-size: 2rem; font-weight: bold; text-align: center; margin-bottom: 15px; }
+        .solution-title { font-size: 1.2rem; font-weight: bold; margin-bottom: 5px; }
+        .correct-form { font-size: 1.6rem; color: var(--success-color); font-weight: bold; margin-top: 5px; }
+
+        /* Labels beim Ziehen */
+        .status-label {
+            position: absolute;
+            top: 20px;
+            padding: 5px 15px;
+            border: 3px solid;
+            border-radius: 5px;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 1.4rem;
+            opacity: 0;
+            z-index: 10;
+        }
+        .label-correct { right: 20px; border-color: var(--success-color); color: var(--success-color); transform: rotate(15deg); }
+        .label-wrong { left: 20px; border-color: var(--error-color); color: var(--error-color); transform: rotate(-15deg); }
+
+        /* Buttons */
+        .bottom-area {
+            position: absolute;
+            bottom: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .controls { display: flex; gap: 40px; }
+
+        .btn-circle {
+            width: 60px; height: 60px; border-radius: 50%; border: none;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; color: white; font-size: 1.5rem; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        .btn-wrong { background-color: var(--error-color); }
+        .btn-correct { background-color: var(--success-color); }
+
+        .solve-btn {
+            background-color: var(--primary-color);
+            color: white; border: none; padding: 10px 25px; border-radius: 20px;
+            cursor: pointer; font-weight: bold; transition: background 0.2s;
+        }
+
+        #result-screen {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-color);
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Genitiv Plural Swipe</h1>
+        <div class="score-board">Frage: <span id="current-round">1</span> / 10</div>
+    </div>
+
+    <div class="game-container">
+        <div class="card-inner" id="card-inner">
+            <!-- Vorderseite -->
+            <div class="card-face card-front" id="card-front">
+                <div class="status-label label-wrong">FALSCH</div>
+                <div class="status-label label-correct">RICHTIG</div>
+                <div class="phrase" id="phrase-display">--</div>
+                <p style="color: #999; font-size: 0.8rem;">Links = Falsch | Rechts = Korrekt</p>
+            </div>
+            <!-- Rückseite -->
+            <div class="card-face card-back">
+                <div class="solution-title" id="sol-status">--</div>
+                <div id="sol-extra"></div>
+                <p style="margin-top: 20px; font-size: 0.8rem; color: #999;">Jetzt swipen zum Fortfahren</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="bottom-area">
+        <button class="solve-btn" id="solve-toggle" onclick="toggleSolution()">Lösung anzeigen</button>
+        <div class="controls">
+            <button class="btn-circle btn-wrong" onclick="processSelection(false)">✕</button>
+            <button class="btn-circle btn-correct" onclick="processSelection(true)">✓</button>
+        </div>
+    </div>
+
+    <div id="result-screen">
+        <h1>Ergebnis</h1>
+        <div style="font-size: 3rem; color: var(--accent-color); margin: 20px 0;" id="final-score">0 / 10</div>
+        <button onclick="location.reload()" style="padding: 12px 30px; border: none; border-radius: 10px; background: var(--primary-color); color: white; cursor: pointer; font-weight: bold;">Erneut versuchen</button>
+    </div>
+
+    <script>
+        const cardsData = [
+            { phrase: "пять стульiev", correct: false, r: "пять стульев" },
+            { phrase: "десять книг", correct: true },
+            { phrase: "шесть уроков", correct: true },
+            { phrase: "восемь яблок", correct: true },
+            { phrase: "девять студент", correct: false, r: "девять студентов" },
+            { phrase: "двенадцать окон", correct: true },
+            { phrase: "двадцать подруг", correct: true },
+            { phrase: "семь братьев", correct: true },
+            { phrase: "пять телефона", correct: false, r: "пять телефонов" },
+            { phrase: "тринадцать песен", correct: true }
+        ];
+
+        let currentIndex = 0;
+        let score = 0;
+        let isFlipped = false;
+        let usedSolve = false;
+        let startX = 0;
+        let currentX = 0;
+        let isDragging = false;
+
+        const cardInner = document.getElementById('card-inner');
+        const phraseDisplay = document.getElementById('phrase-display');
+        const solveToggle = document.getElementById('solve-toggle');
+        const solStatus = document.getElementById('sol-status');
+        const solExtra = document.getElementById('sol-extra');
+        const roundDisplay = document.getElementById('current-round');
+        const labelWrong = document.querySelector('.label-wrong');
+        const labelCorrect = document.querySelector('.label-correct');
+
+        function loadCard() {
+            if (currentIndex >= cardsData.length) {
+                document.getElementById('result-screen').style.display = 'flex';
+                document.getElementById('final-score').textContent = `${score} / ${cardsData.length}`;
+                return;
+            }
+
+            const data = cardsData[currentIndex];
+            phraseDisplay.textContent = data.phrase;
+            roundDisplay.textContent = currentIndex + 1;
+            
+            // Rückseite vorbereiten
+            solStatus.textContent = data.correct ? "Richtig!" : "Falsch!";
+            solStatus.style.color = data.correct ? "var(--success-color)" : "var(--error-color)";
+            solExtra.innerHTML = data.r ? `<div>Richtig ist:</div><div class="correct-form">${data.r}</div>` : "";
+
+            // Reset Zustände
+            usedSolve = false;
+            isFlipped = false;
+            cardInner.classList.remove('is-flipped');
+            solveToggle.textContent = "Lösung anzeigen";
+            resetCardPosition();
+        }
+
+        function toggleSolution() {
+            isFlipped = !isFlipped;
+            usedSolve = true;
+            if (isFlipped) {
+                cardInner.classList.add('is-flipped');
+                solveToggle.textContent = "Frage anzeigen";
+            } else {
+                cardInner.classList.remove('is-flipped');
+                solveToggle.textContent = "Lösung anzeigen";
+            }
+        }
+
+        function resetCardPosition() {
+            cardInner.style.transition = 'transform 0.3s ease, opacity 0.3s';
+            cardInner.style.transform = isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)';
+            cardInner.style.opacity = '1';
+            labelWrong.style.opacity = '0';
+            labelCorrect.style.opacity = '0';
+        }
+
+        // Swipe Interaktion
+        cardInner.addEventListener('mousedown', dragStart);
+        cardInner.addEventListener('touchstart', dragStart);
+        window.addEventListener('mousemove', dragMove);
+        window.addEventListener('touchmove', dragMove);
+        window.addEventListener('mouseup', dragEnd);
+        window.addEventListener('touchend', dragEnd);
+
+        function dragStart(e) {
+            if (currentIndex >= cardsData.length) return;
+            isDragging = true;
+            startX = e.pageX || e.touches[0].pageX;
+            cardInner.style.transition = 'none';
+        }
+
+        function dragMove(e) {
+            if (!isDragging) return;
+            const x = e.pageX || e.touches[0].pageX;
+            currentX = x - startX;
+            const rotateZ = currentX / 15;
+            const rotateY = isFlipped ? 180 : 0;
+            
+            cardInner.style.transform = `translateX(${currentX}px) rotateZ(${rotateZ}deg) rotateY(${rotateY}deg)`;
+
+            // Labels anzeigen (berücksichtigt Flip für korrekte Richtung)
+            const opacity = Math.min(Math.abs(currentX) / 100, 1);
+            if (currentX > 50) {
+                labelCorrect.style.opacity = opacity;
+                labelWrong.style.opacity = 0;
+            } else if (currentX < -50) {
+                labelWrong.style.opacity = opacity;
+                labelCorrect.style.opacity = 0;
+            } else {
+                labelCorrect.style.opacity = 0;
+                labelWrong.style.opacity = 0;
+            }
+        }
+
+        function dragEnd() {
+            if (!isDragging) return;
+            isDragging = false;
+            if (currentX > 120) processSelection(true);
+            else if (currentX < -120) processSelection(false);
+            else resetCardPosition();
+            currentX = 0;
+        }
+
+        function processSelection(userChoice) {
+            const data = cardsData[currentIndex];
+            if (!usedSolve && userChoice === data.correct) {
+                score++;
+            }
+
+            // Karte aus dem Bild fliegen lassen
+            const flyX = userChoice ? 1000 : -1000;
+            cardInner.style.transition = 'transform 0.5s ease-in, opacity 0.5s';
+            cardInner.style.transform = `translateX(${flyX}px) rotateZ(${flyX/20}deg) rotateY(${isFlipped ? 180 : 0}deg)`;
+            cardInner.style.opacity = '0';
+
+            currentIndex++;
+            setTimeout(loadCard, 500);
+        }
+
+        // Spiel starten
+        cardsData.sort(() => Math.random() - 0.5);
+        loadCard();
+    </script>
+</body>
+</html>
