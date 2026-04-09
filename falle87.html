@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch Übung: Die Fallen-Sortierung</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+            --success-color: #27ae60;
+            --error-color: #e74c3c;
+            --nom-color: #16a085;
+            --gen-color: #8e44ad;
+            --bg-color: #f0f3f5;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--primary-color);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        h1 { font-size: 1.6rem; margin-bottom: 10px; }
+        p.description { color: #666; margin-bottom: 30px; line-height: 1.4; }
+
+        /* Zahlen-Pool */
+        #number-pool {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 40px;
+            min-height: 80px;
+            padding: 20px;
+            background: #fdfdfd;
+            border: 2px dashed #ccc;
+            border-radius: 15px;
+        }
+
+        .number-card {
+            width: 55px;
+            height: 55px;
+            background: white;
+            border: 2px solid var(--accent-color);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.05);
+        }
+
+        .number-card.selected {
+            background-color: var(--accent-color);
+            color: white;
+            transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+        }
+
+        /* Körbe Bereich */
+        .baskets-container {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .basket {
+            flex: 1;
+            min-width: 280px;
+            min-height: 200px;
+            border: 3px solid #ddd;
+            border-radius: 20px;
+            padding: 20px;
+            transition: all 0.3s;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .basket:hover {
+            background-color: #f9f9f9;
+        }
+
+        .basket-nom { border-color: var(--nom-color); background-color: #f4fbf9; }
+        .basket-gen { border-color: var(--gen-color); background-color: #f9f4fb; }
+
+        .basket-title {
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin-bottom: 5px;
+        }
+        .basket-nom .basket-title { color: var(--nom-color); }
+        .basket-gen .basket-title { color: var(--gen-color); }
+
+        .basket-subtitle {
+            font-size: 0.85rem;
+            color: #777;
+            margin-bottom: 15px;
+        }
+
+        .items-area {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .placed-number {
+            background: #2c3e50;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-weight: bold;
+            animation: popIn 0.3s ease-out;
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .shake { animation: shake 0.4s; }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        /* Controls */
+        .controls {
+            margin-top: 40px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        button {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            color: white;
+            transition: opacity 0.2s;
+        }
+
+        #solve-btn { background-color: #7f8c8d; }
+        #reset-btn { background-color: var(--primary-color); }
+
+        #message {
+            margin-top: 20px;
+            font-weight: bold;
+            height: 24px;
+        }
+
+        @media (max-width: 600px) {
+            .baskets-container { flex-direction: column; }
+            .basket { min-width: 100%; min-height: 150px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Die „Fallen-Sortierung“</h1>
+        <p class="description">
+            Klicke eine Zahl an und weise sie dem richtigen Korb zu.<br>
+            <b>Achtung:</b> Wo gehören die Ausnahmen 11, 12, 13 und 14 hin?
+        </p>
+
+        <div id="number-pool"></div>
+
+        <div class="baskets-container">
+            <div class="basket basket-nom" onclick="handleBasketClick('nom')">
+                <div class="basket-title">Wie Zahl 1</div>
+                <div class="basket-subtitle">(Nominativ Singular)</div>
+                <div class="items-area" id="items-nom"></div>
+            </div>
+            <div class="basket basket-gen" onclick="handleBasketClick('gen')">
+                <div class="basket-title">Wie Zahl 5</div>
+                <div class="basket-subtitle">(Genitiv Plural)</div>
+                <div class="items-area" id="items-gen"></div>
+            </div>
+        </div>
+
+        <div id="message"></div>
+
+        <div class="controls">
+            <button id="solve-btn" onclick="showSolution()">Lösung anzeigen</button>
+            <button id="reset-btn" onclick="resetGame()">Neu starten</button>
+        </div>
+    </div>
+
+    <script>
+        const numbers = [
+            { val: "1", type: "nom" },
+            { val: "21", type: "nom" },
+            { val: "31", type: "nom" },
+            { val: "41", type: "nom" },
+            { val: "5", type: "gen" },
+            { val: "11", type: "gen" }, // Falle
+            { val: "12", type: "gen" }, // Falle
+            { val: "13", type: "gen" }, // Falle
+            { val: "14", type: "gen" }, // Falle
+            { val: "15", type: "gen" },
+            { val: "20", type: "gen" },
+            { val: "30", type: "gen" }
+        ];
+
+        let selectedElement = null;
+        let selectedData = null;
+        let solvedCount = 0;
+
+        function initGame() {
+            const pool = document.getElementById('number-pool');
+            pool.innerHTML = '';
+            document.getElementById('items-nom').innerHTML = '';
+            document.getElementById('items-gen').innerHTML = '';
+            document.getElementById('message').textContent = '';
+            document.getElementById('solve-btn').style.display = 'inline-block';
+            
+            selectedElement = null;
+            selectedData = null;
+            solvedCount = 0;
+
+            const shuffled = [...numbers].sort(() => Math.random() - 0.5);
+            shuffled.forEach(num => {
+                const card = document.createElement('div');
+                card.className = 'number-card';
+                card.textContent = num.val;
+                card.onclick = (e) => {
+                    e.stopPropagation();
+                    selectNumber(card, num);
+                };
+                pool.appendChild(card);
+            });
+        }
+
+        function selectNumber(el, data) {
+            if (selectedElement) selectedElement.classList.remove('selected');
+            selectedElement = el;
+            selectedData = data;
+            el.classList.add('selected');
+            document.getElementById('message').textContent = `Zahl ${data.val} gewählt. Klicke auf den richtigen Korb!`;
+            document.getElementById('message').style.color = "var(--accent-color)";
+        }
+
+        function handleBasketClick(basketType) {
+            if (!selectedElement) return;
+
+            if (selectedData.type === basketType) {
+                // Richtig
+                const item = document.createElement('div');
+                item.className = 'placed-number';
+                item.textContent = selectedData.val;
+                document.getElementById(`items-${basketType}`).appendChild(item);
+
+                selectedElement.style.display = 'none';
+                selectedElement = null;
+                selectedData = null;
+                solvedCount++;
+
+                document.getElementById('message').textContent = "Richtig!";
+                document.getElementById('message').style.color = "var(--success-color)";
+
+                if (solvedCount === numbers.length) {
+                    document.getElementById('message').textContent = "Hervorragend! Du hast alle Fallen erkannt.";
+                    document.getElementById('solve-btn').style.display = 'none';
+                }
+            } else {
+                // Falsch
+                const basketEl = document.querySelector(`.basket-${basketType}`);
+                basketEl.classList.add('shake');
+                setTimeout(() => basketEl.classList.remove('shake'), 400);
+                
+                document.getElementById('message').textContent = "Leider falsch. Überlege bei dieser Zahl noch einmal!";
+                document.getElementById('message').style.color = "var(--error-color)";
+            }
+        }
+
+        function showSolution() {
+            const cards = document.querySelectorAll('.number-card');
+            cards.forEach(card => {
+                if (card.style.display !== 'none') {
+                    const data = numbers.find(n => n.val === card.textContent);
+                    const item = document.createElement('div');
+                    item.className = 'placed-number';
+                    item.style.background = "#7f8c8d";
+                    item.textContent = data.val;
+                    document.getElementById(`items-${data.type}`).appendChild(item);
+                    card.style.display = 'none';
+                }
+            });
+            document.getElementById('message').textContent = "Lösung wird angezeigt.";
+            document.getElementById('message').style.color = "var(--primary-color)";
+            document.getElementById('solve-btn').style.display = 'none';
+            selectedElement = null;
+            selectedData = null;
+        }
+
+        function resetGame() {
+            initGame();
+        }
+
+        // Klick auf Hintergrund hebt Auswahl auf
+        document.body.onclick = () => {
+            if (selectedElement) {
+                selectedElement.classList.remove('selected');
+                selectedElement = null;
+                selectedData = null;
+                document.getElementById('message').textContent = '';
+            }
+        };
+
+        initGame();
+    </script>
+</body>
+</html>
