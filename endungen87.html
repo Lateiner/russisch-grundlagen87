@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch Übung: Endungs-Puzzle (2, 3, 4)</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+            --success-color: #27ae60;
+            --error-color: #e74c3c;
+            --bg-color: #f0f4f8;
+            --card-bg: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--primary-color);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            margin-bottom: 25px;
+            overflow: hidden;
+        }
+
+        #progress-fill {
+            height: 100%;
+            background: var(--accent-color);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .puzzle-box {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px 10px;
+            margin-bottom: 25px;
+            border: 2px solid #edf2f7;
+        }
+
+        .word-display {
+            font-size: 2.2rem;
+            font-weight: bold;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .number-part { color: var(--accent-color); }
+        .stem-part { color: var(--primary-color); }
+        .ending-placeholder {
+            color: var(--error-color);
+            border-bottom: 3px solid #cbd5e0;
+            min-width: 40px;
+            display: inline-block;
+        }
+
+        .ending-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 25px;
+        }
+
+        .ending-btn {
+            padding: 15px;
+            font-size: 1.4rem;
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: bold;
+        }
+
+        .ending-btn:hover:not(:disabled) {
+            border-color: var(--accent-color);
+            background: #ebf8ff;
+        }
+
+        .ending-btn.correct {
+            background-color: var(--success-color) !important;
+            border-color: var(--success-color) !important;
+            color: white;
+        }
+
+        .ending-btn.wrong {
+            background-color: var(--error-color) !important;
+            border-color: var(--error-color) !important;
+            color: white;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .action-btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            color: white;
+        }
+
+        #solve-btn { background-color: #718096; }
+        #next-btn { background-color: var(--accent-color); display: none; }
+
+        #feedback {
+            height: 24px;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        #result-screen { display: none; }
+        .final-score { font-size: 3rem; color: var(--accent-color); margin: 20px 0; }
+        #reset-btn { background-color: var(--primary-color); }
+
+        @media (max-width: 400px) {
+            .word-display { font-size: 1.8rem; }
+            .ending-btn { font-size: 1.2rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container" id="quiz-ui">
+        <h1>Endungs-Puzzle</h1>
+        <p>Wähle die richtige Endung für den Genitiv Singular!</p>
+        
+        <div class="progress-bar">
+            <div id="progress-fill"></div>
+        </div>
+
+        <div id="feedback"></div>
+
+        <div class="puzzle-box">
+            <div class="word-display">
+                <span class="number-part" id="display-number">3</span>
+                <span class="stem-part" id="display-stem">книг</span>
+                <span class="ending-placeholder" id="display-ending">...</span>
+            </div>
+        </div>
+
+        <div class="ending-grid">
+            <button class="ending-btn" onclick="checkAnswer('-а')">-а</button>
+            <button class="ending-btn" onclick="checkAnswer('-и')">-и</button>
+            <button class="ending-btn" onclick="checkAnswer('-ы')">-ы</button>
+            <button class="ending-btn" onclick="checkAnswer('-я')">-я</button>
+        </div>
+
+        <div class="controls">
+            <button id="solve-btn" class="action-btn" onclick="showSolution()">Lösung anzeigen</button>
+            <button id="next-btn" class="action-btn" onclick="nextQuestion()">Weiter</button>
+        </div>
+    </div>
+
+    <div class="container" id="result-screen">
+        <h1>Ergebnis</h1>
+        <p>Du hast alle Puzzles gelöst!</p>
+        <div class="final-score" id="score-display">0 / 10</div>
+        <button id="reset-btn" class="action-btn" onclick="resetGame()">Neu starten</button>
+    </div>
+
+    <script>
+        const puzzleData = [
+            { num: "3", stem: "книг", ending: "-и", full: "три книги" },     // weibl. (k, g, ch Regel)
+            { num: "2", stem: "стул", ending: "-а", full: "два стула" },    // männl. (hart)
+            { num: "4", stem: "окн", ending: "-а", full: "четыре окна" },   // sächl. (hart)
+            { num: "2", stem: "машин", ending: "-ы", full: "две машины" },  // weibl. (hart)
+            { num: "3", stem: "билет", ending: "-а", full: "три билета" },  // männl. (hart)
+            { num: "4", stem: "яблок", ending: "-а", full: "четыre яблока" },// sächl. (hart)
+            { num: "2", stem: "сумк", ending: "-и", full: "две сумки" },    // weibl. (k, g, ch Regel)
+            { num: "3", stem: "урок", ending: "-а", full: "три урока" },    // männl. (hart)
+            { num: "2", stem: "здани", ending: "-я", full: "два здания" },  // sächl. (weich)
+            { noun: "преподавател", num: "4", stem: "преподавател", ending: "-я", full: "четыре преподавателя" } // männl. (weich)
+        ];
+
+        let currentIndex = 0;
+        let score = 0;
+        let answered = false;
+        let firstTry = true;
+
+        function loadQuestion() {
+            answered = false;
+            firstTry = true;
+            const current = puzzleData[currentIndex];
+            
+            document.getElementById('display-number').textContent = current.num;
+            document.getElementById('display-stem').textContent = current.stem;
+            document.getElementById('display-ending').textContent = "...";
+            document.getElementById('display-ending').style.color = "var(--error-color)";
+            
+            document.getElementById('feedback').textContent = "";
+            document.getElementById('next-btn').style.display = "none";
+            document.getElementById('solve-btn').style.display = "block";
+            
+            const buttons = document.querySelectorAll('.ending-btn');
+            buttons.forEach(btn => {
+                btn.classList.remove('correct', 'wrong');
+                btn.disabled = false;
+            });
+
+            updateProgress();
+        }
+
+        function checkAnswer(choice) {
+            if (answered) return;
+            
+            const current = puzzleData[currentIndex];
+            const buttons = document.querySelectorAll('.ending-btn');
+            let selectedBtn = Array.from(buttons).find(b => b.textContent === choice);
+
+            if (choice === current.ending) {
+                selectedBtn.classList.add('correct');
+                document.getElementById('display-ending').textContent = choice.replace('-', '');
+                document.getElementById('display-ending').style.color = "var(--success-color)";
+                if (firstTry) score++;
+                document.getElementById('feedback').textContent = "Richtig!";
+                document.getElementById('feedback').style.color = "var(--success-color)";
+                endQuestion();
+            } else {
+                selectedBtn.classList.add('wrong');
+                selectedBtn.disabled = true;
+                firstTry = false;
+                document.getElementById('feedback').textContent = "Das ist nicht die richtige Endung.";
+                document.getElementById('feedback').style.color = "var(--error-color)";
+            }
+        }
+
+        function endQuestion() {
+            answered = true;
+            document.querySelectorAll('.ending-btn').forEach(btn => btn.disabled = true);
+            document.getElementById('solve-btn').style.display = "none";
+            document.getElementById('next-btn').style.display = "block";
+        }
+
+        function showSolution() {
+            const current = puzzleData[currentIndex];
+            firstTry = false;
+            document.getElementById('display-ending').textContent = current.ending.replace('-', '');
+            document.getElementById('display-ending').style.color = "var(--primary-color)";
+            
+            document.querySelectorAll('.ending-btn').forEach(btn => {
+                if (btn.textContent === current.ending) {
+                    btn.classList.add('correct');
+                }
+                btn.disabled = true;
+            });
+            
+            document.getElementById('feedback').textContent = "Lösung: " + current.full;
+            document.getElementById('feedback').style.color = "var(--primary-color)";
+            endQuestion();
+        }
+
+        function nextQuestion() {
+            currentIndex++;
+            if (currentIndex < puzzleData.length) {
+                loadQuestion();
+            } else {
+                showFinalResult();
+            }
+        }
+
+        function showFinalResult() {
+            document.getElementById('quiz-ui').style.display = 'none';
+            document.getElementById('result-screen').style.display = 'block';
+            document.getElementById('score-display').textContent = `${score} / ${puzzleData.length}`;
+        }
+
+        function resetGame() {
+            currentIndex = 0;
+            score = 0;
+            document.getElementById('quiz-ui').style.display = 'block';
+            document.getElementById('result-screen').style.display = 'none';
+            puzzleData.sort(() => Math.random() - 0.5);
+            loadQuestion();
+        }
+
+        function updateProgress() {
+            const percent = (currentIndex / puzzleData.length) * 100;
+            document.getElementById('progress-fill').style.width = percent + "%";
+        }
+
+        // Initiale Mischung und Start
+        puzzleData.sort(() => Math.random() - 0.5);
+        loadQuestion();
+    </script>
+</body>
+</html>
