@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch Übung: Grammatik-Slot-Maschine</title>
+    <style>
+        :root {
+            --gold: #f1c40f;
+            --gold-dark: #d4ac0d;
+            --silver: #bdc3c7;
+            --dark-bg: #1a1a1a;
+            --machine-color: #c0392b;
+            --success: #27ae60;
+            --error: #e74c3c;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: #333;
+            color: white;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+        }
+
+        h1 { color: var(--gold); margin-bottom: 10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
+
+        /* Slot Maschine Gehäuse */
+        .slot-machine {
+            background-color: var(--machine-color);
+            border: 8px solid #8e44ad;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 15px 0 #922b21, 0 20px 30px rgba(0,0,0,0.5);
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        /* Das Fenster mit den Rollen */
+        .reels-container {
+            background-color: #fff;
+            border: 5px solid #333;
+            border-radius: 10px;
+            display: flex;
+            height: 120px;
+            overflow: hidden;
+            gap: 5px;
+            padding: 5px;
+        }
+
+        .reel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(to bottom, #ddd 0%, #fff 20%, #fff 80%, #ddd 100%);
+            color: #222;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-radius: 5px;
+            transition: transform 0.1s ease-out;
+            text-align: center;
+            padding: 0 5px;
+            min-width: 0; /* Verhindert Overflow auf Mobilgeräten */
+        }
+
+        .reel span {
+            display: block;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 100%;
+        }
+
+        /* Buttons Bereich */
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .spin-btn {
+            background: linear-gradient(to bottom, #f1c40f, #d4ac0d);
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 5px 0 #9a7d0a;
+            color: #333;
+            transition: transform 0.1s;
+        }
+
+        .spin-btn:active { transform: translateY(5px); box-shadow: 0 0 0 #9a7d0a; }
+        .spin-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .choice-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 10px;
+            display: none; /* Erst nach dem Spin anzeigen */
+        }
+
+        .choice-btn {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            color: white;
+            font-size: 1rem;
+        }
+
+        .btn-gold { background-color: var(--success); }
+        .btn-fool { background-color: var(--error); }
+
+        /* Feedback Bereich */
+        #feedback {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            min-height: 50px;
+            font-weight: bold;
+            display: none;
+        }
+
+        .explanation {
+            font-weight: normal;
+            font-size: 0.9rem;
+            margin-top: 10px;
+            display: block;
+            color: #fff;
+        }
+
+        @media (max-width: 480px) {
+            .reel { font-size: 0.9rem; height: 100px; }
+            .reels-container { height: 100px; }
+            .spin-btn { font-size: 1.2rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Grammatik-Slot-Maschine</h1>
+        <p>Erspinne eine Kombination und entscheide: Ist es grammatikalisch korrekt?</p>
+
+        <div class="slot-machine">
+            <div class="reels-container">
+                <div class="reel" id="reel-tens"><span>Зехнер</span></div>
+                <div class="reel" id="reel-ones"><span>Еинер</span></div>
+                <div class="reel" id="reel-noun"><span>Субстантив</span></div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="spin-btn" id="spin-button" onclick="spin()">SPIN</button>
+
+            <div id="feedback"></div>
+
+            <div class="choice-buttons" id="choice-area">
+                <button class="choice-btn btn-gold" onclick="checkUserChoice(true)">Echtes Gold<br>(Korrekt)</button>
+                <button class="choice-btn btn-fool" onclick="checkUserChoice(false)">Falsches Gold<br>(Fehler)</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const tens = ["двадцать", "тридцать", "сорок", "пятьдесят", "шестьдесят"];
+        const ones = ["один", "два", "три", "четыре", "пять", "шесть", "семь", " "];
+        const nouns = ["стул", "стула", "стульев"];
+
+        let currentCombo = { ten: "", one: "", noun: "" };
+
+        function spin() {
+            const spinBtn = document.getElementById('spin-button');
+            const choiceArea = document.getElementById('choice-area');
+            const feedback = document.getElementById('feedback');
+            
+            spinBtn.disabled = true;
+            choiceArea.style.display = 'none';
+            feedback.style.display = 'none';
+
+            // Animation simulieren
+            let count = 0;
+            const interval = setInterval(() => {
+                document.getElementById('reel-tens').innerHTML = `<span>${tens[Math.floor(Math.random()*tens.length)]}</span>`;
+                document.getElementById('reel-ones').innerHTML = `<span>${ones[Math.floor(Math.random()*ones.length)]}</span>`;
+                document.getElementById('reel-noun').innerHTML = `<span>${nouns[Math.floor(Math.random()*nouns.length)]}</span>`;
+                count++;
+                if (count > 15) {
+                    clearInterval(interval);
+                    finalizeSpin();
+                }
+            }, 100);
+        }
+
+        function finalizeSpin() {
+            currentCombo.ten = tens[Math.floor(Math.random() * tens.length)];
+            currentCombo.one = ones[Math.floor(Math.random() * ones.length)];
+            currentCombo.noun = nouns[Math.floor(Math.random() * nouns.length)];
+
+            document.getElementById('reel-tens').innerHTML = `<span>${currentCombo.ten}</span>`;
+            document.getElementById('reel-ones').innerHTML = `<span>${currentCombo.one}</span>`;
+            document.getElementById('reel-noun').innerHTML = `<span>${currentCombo.noun}</span>`;
+
+            document.getElementById('choice-area').style.display = 'flex';
+            document.getElementById('spin-button').disabled = false;
+        }
+
+        function isCorrect(combo) {
+            const lastWord = combo.one.trim();
+            
+            // Wenn Einer leer ist (runde Zahl wie 20, 30...)
+            if (lastWord === "") {
+                return combo.noun === "стульев"; // Genitiv Plural
+            }
+            
+            if (lastWord === "один") {
+                return combo.noun === "стул"; // Nominativ Singular
+            }
+            
+            if (["два", "три", "четыre", "четыре"].includes(lastWord)) {
+                return combo.noun === "стула"; // Genitiv Singular
+            }
+            
+            // Für 5, 6, 7...
+            return combo.noun === "стульев"; // Genitiv Plural
+        }
+
+        function getExplanation(combo) {
+            const lastWord = combo.one.trim() === "" ? combo.ten : combo.one;
+            let rule = "";
+            let correctForm = "";
+
+            if (combo.one.trim() === "") {
+                rule = "Runde Zehnerzahlen (20, 30...) verlangen den Genitiv Plural.";
+                correctForm = combo.ten + " стульев";
+            } else if (combo.one === "один") {
+                rule = "Zahlen, die auf 'один' enden, verlangen den Nominativ Singular.";
+                correctForm = combo.ten + " один стul";
+            } else if (["два", "три", "четыре"].includes(combo.one)) {
+                rule = "Zahlen, die auf 2, 3 oder 4 enden, verlangen den Genitiv Singular.";
+                correctForm = combo.ten + " " + combo.one + " стула";
+            } else {
+                rule = "Zahlen, die auf 5-9 enden, verlangen den Genitiv Plural.";
+                correctForm = combo.ten + " " + combo.one + " стульев";
+            }
+
+            return `<br><span class="explanation">Regel: ${rule}<br>Richtig wäre: <b>${correctForm}</b></span>`;
+        }
+
+        function checkUserChoice(userSaidCorrect) {
+            const correct = isCorrect(currentCombo);
+            const feedback = document.getElementById('feedback');
+            const choiceArea = document.getElementById('choice-area');
+            
+            feedback.style.display = 'block';
+            choiceArea.style.display = 'none';
+
+            if (userSaidCorrect === correct) {
+                feedback.style.backgroundColor = varToHex('--success');
+                feedback.innerHTML = "RICHTIG! Das ist echtes Gold. 💰";
+            } else {
+                feedback.style.backgroundColor = varToHex('--error');
+                feedback.innerHTML = "FALSCH! Das war nur glänzender Kies. 🪨";
+            }
+
+            feedback.innerHTML += getExplanation(currentCombo);
+        }
+
+        // Hilfsfunktion um CSS Variablen in Hex für JS Style-Zuweisung zu nutzen
+        function varToHex(varName) {
+            return varName === '--success' ? '#27ae60' : '#e74c3c';
+        }
+    </script>
+</body>
+</html>
