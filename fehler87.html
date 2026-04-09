@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch Übung: Fehlersuche</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+            --success-color: #27ae60;
+            --error-color: #e74c3c;
+            --bg-color: #f0f2f5;
+            --card-bg: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--primary-color);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+            text-align: center;
+            box-sizing: border-box;
+        }
+
+        h1 { font-size: 1.5rem; margin-bottom: 10px; }
+        p.desc { color: #666; margin-bottom: 20px; }
+
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background: #eee;
+            border-radius: 5px;
+            margin-bottom: 30px;
+            overflow: hidden;
+        }
+
+        #progress-fill {
+            height: 100%;
+            background: var(--accent-color);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .phrase-card {
+            padding: 20px;
+            font-size: 1.3rem;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #fff;
+            user-select: none;
+        }
+
+        .phrase-card:hover:not(.disabled) {
+            border-color: var(--accent-color);
+            background: #f9f9f9;
+        }
+
+        .phrase-card.correct-find {
+            background-color: #d4edda !important;
+            border-color: var(--success-color) !important;
+            color: var(--success-color);
+            font-weight: bold;
+        }
+
+        .phrase-card.wrong-find {
+            background-color: #f8d7da !important;
+            border-color: var(--error-color) !important;
+            color: var(--error-color);
+        }
+
+        .phrase-card.disabled {
+            cursor: default;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        button {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            color: white;
+            transition: opacity 0.2s;
+        }
+
+        #solve-btn { background-color: #7f8c8d; }
+        #next-btn { background-color: var(--accent-color); display: none; }
+        #reset-btn { background-color: var(--primary-color); display: none; }
+
+        #feedback {
+            margin-bottom: 15px;
+            font-weight: bold;
+            height: 24px;
+        }
+
+        #result-screen { display: none; }
+        .final-score { font-size: 3rem; color: var(--accent-color); margin: 20px 0; }
+
+        @media (min-width: 500px) {
+            .cards-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container" id="quiz-ui">
+        <h1>Finde den Fehler!</h1>
+        <p class="desc">Zwei Phrasen sind richtig, eine ist falsch. Klicke auf die <b>falsche</b> Kombination.</p>
+        
+        <div class="progress-bar">
+            <div id="progress-fill"></div>
+        </div>
+
+        <div id="feedback"></div>
+
+        <div class="cards-grid" id="cards-grid"></div>
+
+        <div class="controls">
+            <button id="solve-btn" onclick="showSolution()">Lösung anzeigen</button>
+            <button id="next-btn" onclick="nextRound()">Nächste Runde</button>
+        </div>
+    </div>
+
+    <div class="container" id="result-screen">
+        <h1>Ergebnis</h1>
+        <p>Du hast alle Fehler gefunden!</p>
+        <div class="final-score" id="score-display">0 / 10</div>
+        <button id="reset-btn" style="display:inline-block" onclick="resetGame()">Neu starten</button>
+    </div>
+
+    <script>
+        const rounds = [
+            {
+                options: [
+                    { text: "один стул", correct: true },
+                    { text: "одна книга", correct: true },
+                    { text: "одно книга", correct: false } // FEHLER
+                ]
+            },
+            {
+                options: [
+                    { text: "одна сумка", correct: true },
+                    { text: "одна стул", correct: false }, // FEHLER
+                    { text: "одно окно", correct: true }
+                ]
+            },
+            {
+                options: [
+                    { text: "один город", correct: true },
+                    { text: "один история", correct: false }, // FEHLER
+                    { text: "одна ручка", correct: true }
+                ]
+            },
+            {
+                options: [
+                    { text: "один телефон", correct: true },
+                    { text: "одна сумка", correct: true },
+                    { text: "одна задание", correct: false } // FEHLER
+                ]
+            },
+            {
+                options: [
+                    { text: "одно яблоко", correct: true },
+                    { text: "один яблоко", correct: false }, // FEHLER
+                    { text: "одна ручка", correct: true }
+                ]
+            },
+            {
+                options: [
+                    { text: "один урок", correct: true },
+                    { text: "одна лекция", correct: true },
+                    { text: "один окно", correct: false } // FEHLER
+                ]
+            },
+            {
+                options: [
+                    { text: "одна тетрадь", correct: true },
+                    { text: "одна фильм", correct: false }, // FEHLER
+                    { text: "один город", correct: true }
+                ]
+            },
+            {
+                options: [
+                    { text: "одно упражнение", correct: true },
+                    { text: "одна ручка", correct: true },
+                    { text: "один здание", correct: false } // FEHLER
+                ]
+            },
+            {
+                options: [
+                    { text: "один преподаватель", correct: true },
+                    { text: "одно задание", correct: true },
+                    { text: "одна стул", correct: false } // FEHLER
+                ]
+            },
+            {
+                options: [
+                    { text: "одна машина", correct: true },
+                    { text: "одно видео", correct: true },
+                    { text: "один сумка", correct: false } // FEHLER
+                ]
+            }
+        ];
+
+        let currentRound = 0;
+        let score = 0;
+        let answered = false;
+        let firstTry = true;
+
+        function loadRound() {
+            answered = false;
+            firstTry = true;
+            const round = rounds[currentRound];
+            const grid = document.getElementById('cards-grid');
+            const feedback = document.getElementById('feedback');
+            const nextBtn = document.getElementById('next-btn');
+            const solveBtn = document.getElementById('solve-btn');
+
+            grid.innerHTML = '';
+            feedback.textContent = '';
+            nextBtn.style.display = 'none';
+            solveBtn.style.display = 'inline-block';
+
+            // Optionen mischen
+            const shuffledOptions = [...round.options].sort(() => Math.random() - 0.5);
+
+            shuffledOptions.forEach(opt => {
+                const card = document.createElement('div');
+                card.className = 'phrase-card';
+                card.textContent = opt.text;
+                card.onclick = () => checkAnswer(card, opt.correct);
+                grid.appendChild(card);
+            });
+
+            updateProgress();
+        }
+
+        function checkAnswer(card, isCorrectPhrase) {
+            if (answered) return;
+
+            if (!isCorrectPhrase) {
+                // Der User hat den FEHLER gefunden (richtig!)
+                card.classList.add('correct-find');
+                if (firstTry) score++;
+                document.getElementById('feedback').textContent = "Richtig! Das ist der Fehler.";
+                document.getElementById('feedback').style.color = "var(--success-color)";
+                endRound();
+            } else {
+                // Der User hat auf eine RICHTIGE Phrase geklickt (falsch!)
+                card.classList.add('wrong-find');
+                firstTry = false;
+                document.getElementById('feedback').textContent = "Nein, das ist grammatikalisch korrekt.";
+                document.getElementById('feedback').style.color = "var(--error-color)";
+            }
+        }
+
+        function endRound() {
+            answered = true;
+            document.querySelectorAll('.phrase-card').forEach(c => c.classList.add('disabled'));
+            document.getElementById('solve-btn').style.display = 'none';
+            document.getElementById('next-btn').style.display = 'inline-block';
+        }
+
+        function showSolution() {
+            firstTry = false;
+            const cards = document.querySelectorAll('.phrase-card');
+            const round = rounds[currentRound];
+            
+            cards.forEach(card => {
+                const opt = round.options.find(o => o.text === card.textContent);
+                if (!opt.correct) {
+                    card.classList.add('correct-find');
+                }
+            });
+            document.getElementById('feedback').textContent = "Hier war der Fehler.";
+            document.getElementById('feedback').style.color = "var(--primary-color)";
+            endRound();
+        }
+
+        function nextRound() {
+            currentRound++;
+            if (currentRound < rounds.length) {
+                loadRound();
+            } else {
+                showFinalResult();
+            }
+        }
+
+        function showFinalResult() {
+            document.getElementById('quiz-ui').style.display = 'none';
+            document.getElementById('result-screen').style.display = 'block';
+            document.getElementById('score-display').textContent = `${score} / ${rounds.length}`;
+        }
+
+        function resetGame() {
+            currentRound = 0;
+            score = 0;
+            document.getElementById('quiz-ui').style.display = 'block';
+            document.getElementById('result-screen').style.display = 'none';
+            loadRound();
+        }
+
+        function updateProgress() {
+            const percent = (currentRound / rounds.length) * 100;
+            document.getElementById('progress-fill').style.width = percent + "%";
+        }
+
+        loadRound();
+    </script>
+</body>
+</html>
