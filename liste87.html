@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Lernportal: Einkaufsliste</title>
+    <link href="https://fonts.googleapis.com/css2?family=Indie+Flower&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-body: #f4f7f6;
+            --paper-bg: #fffef2;
+            --app-bg: #ffffff;
+            --primary: #4834d4;
+            --accent: #686de0;
+            --success: #27ae60;
+            --error: #eb4d4b;
+            --text-main: #2d3436;
+            --line-color: #e0e0e0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .main-wrapper {
+            width: 95%;
+            max-width: 1100px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .title-section {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .title-section h1 {
+            font-size: 1.8rem;
+            color: var(--primary);
+            margin: 0;
+        }
+
+        /* Layout-Container */
+        .workspace {
+            display: grid;
+            grid-template-columns: 1fr 1.3fr;
+            gap: 30px;
+            align-items: start;
+        }
+
+        /* --- Linke Seite: Der Notizzettel --- */
+        .notebook {
+            background-color: var(--paper-bg);
+            padding: 40px;
+            border-radius: 2px;
+            box-shadow: 
+                0 1px 1px rgba(0,0,0,0.1), 
+                0 10px 0 -5px var(--paper-bg), 
+                0 10px 1px -4px rgba(0,0,0,0.1), 
+                0 20px 0 -10px var(--paper-bg), 
+                0 20px 1px -9px rgba(0,0,0,0.1);
+            position: relative;
+            min-height: 550px;
+            background-image: linear-gradient(var(--line-color) 1px, transparent 1px);
+            background-size: 100% 2.8rem;
+            line-height: 2.8rem;
+        }
+
+        .notebook::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 40px; bottom: 0;
+            width: 2px;
+            background-color: #ff9f9f;
+        }
+
+        .notebook h2 {
+            font-family: 'Indie Flower', cursive;
+            font-size: 2.5rem;
+            margin: 0 0 20px 20px;
+            color: #444;
+            line-height: 1.2;
+        }
+
+        .note-entry {
+            font-family: 'Indie Flower', cursive;
+            font-size: 1.6rem;
+            padding-left: 25px;
+            color: #333;
+        }
+
+        /* --- Rechte Seite: Die App --- */
+        .app-container {
+            background-color: var(--app-bg);
+            border-radius: 24px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+            padding: 25px;
+            border: 1px solid #eee;
+        }
+
+        .app-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f9f9f9;
+        }
+
+        .app-header span {
+            font-weight: 700;
+            font-size: 1.2rem;
+            color: var(--primary);
+        }
+
+        .cart-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .cart-item {
+            display: grid;
+            grid-template-columns: 50px 1fr 30px;
+            align-items: center;
+            background: #f8fafb;
+            padding: 12px 18px;
+            border-radius: 16px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 2px solid transparent;
+        }
+
+        .qty-badge {
+            background: var(--primary);
+            color: white;
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        .select-wrapper {
+            padding: 0 10px;
+        }
+
+        select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 10px;
+            border: 1px solid #d1d8e0;
+            font-size: 16px;
+            background: white;
+            cursor: pointer;
+            outline: none;
+            color: var(--text-main);
+        }
+
+        /* Feedback-Styles */
+        .item-correct { border-color: var(--success); background-color: #f1fcf6; }
+        .item-wrong { border-color: var(--error); background-color: #fff8f8; }
+
+        .feedback-icon {
+            font-size: 1.2rem;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        /* Buttons */
+        .footer-actions {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 14px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.1s, opacity 0.2s;
+            color: white;
+        }
+
+        .btn:active { transform: scale(0.96); }
+        .btn-solve { background-color: #7f8c8d; }
+        .btn-reset { background-color: var(--primary); }
+
+        #final-message {
+            height: 30px;
+            text-align: center;
+            font-weight: 700;
+            color: var(--success);
+            margin-top: 10px;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 950px) {
+            .workspace {
+                grid-template-columns: 1fr;
+            }
+            .notebook {
+                min-height: auto;
+                background-size: 100% 2.2rem;
+                line-height: 2.2rem;
+                padding: 20px;
+            }
+            .note-entry { font-size: 1.3rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="main-wrapper">
+    <div class="title-section">
+        <h1>Russisch-Grammatik: Der Einkauf</h1>
+    </div>
+
+    <div class="workspace">
+        <!-- ANALOGE LISTE -->
+        <div class="notebook">
+            <h2>Einkaufsliste</h2>
+            <div id="note-entries"></div>
+        </div>
+
+        <!-- DIGITALE APP -->
+        <div class="app-container">
+            <div class="app-header">
+                <span>🛒 Warenkorb</span>
+                <small id="progress-text">0 / 10 erledigt</small>
+            </div>
+            <div class="cart-list" id="cart-items"></div>
+            <div id="final-message"></div>
+        </div>
+    </div>
+
+    <div class="footer-actions">
+        <button class="btn btn-solve" onclick="showAllSolutions()">Lösung anzeigen</button>
+        <button class="btn btn-reset" onclick="restartGame()">Neu starten</button>
+    </div>
+</div>
+
+<script>
+    const data = [
+        { qty: "1", ger: "Apfel", rus: "яблоко", correct: "яблоко", opts: ["яблоко", "яблока", "яблок"] },
+        { qty: "3", ger: "Bananen", rus: "банан", correct: "банана", opts: ["банан", "банана", "бананов"] },
+        { qty: "5", ger: "Zitronen", rus: "лимон", correct: "лимонов", opts: ["лимон", "лимона", "лимонов"] },
+        { qty: "21", ger: "Tomaten", rus: "помидор", correct: "помидор", opts: ["помидор", "помидора", "помидоров"] },
+        { qty: "12", ger: "Birnen", rus: "груша", correct: "груш", opts: ["груша", "груши", "груш"] },
+        { qty: "2", ger: "Gurken", rus: "огурец", correct: "огурца", opts: ["огурец", "огурца", "огурцов"] },
+        { qty: "34", ger: "Eier", rus: "яйцо", correct: "яйца", opts: ["яйцо", "яйца", "яиц"] },
+        { qty: "11", ger: "Apfelsinen", rus: "апельсин", correct: "апельсинов", opts: ["апельсин", "апельсина", "апельсинов"] },
+        { qty: "101", ger: "Tickets", rus: "билет", correct: "билет", opts: ["билет", "билета", "билетов"] },
+        { qty: "45", ger: "Hefte", rus: "тетрадь", correct: "тетрадей", opts: ["тетрадь", "тетради", "тетрадей"] }
+    ];
+
+    function restartGame() {
+        const noteContainer = document.getElementById('note-entries');
+        const cartContainer = document.getElementById('cart-items');
+        document.getElementById('final-message').textContent = '';
+        document.getElementById('progress-text').textContent = '0 / 10 erledigt';
+
+        noteContainer.innerHTML = '';
+        cartContainer.innerHTML = '';
+
+        data.forEach((item, i) => {
+            // Notizzettel (links)
+            const entry = document.createElement('div');
+            entry.className = 'note-entry';
+            entry.textContent = `${item.qty} ${item.ger}`;
+            noteContainer.appendChild(entry);
+
+            // App (rechts)
+            const row = document.createElement('div');
+            row.className = 'cart-item';
+            row.id = `row-${i}`;
+
+            const shuffled = [...item.opts].sort(() => Math.random() - 0.5);
+
+            row.innerHTML = `
+                <div class="qty-badge">${item.qty}</div>
+                <div class="select-wrapper">
+                    <select id="sel-${i}" onchange="checkEntry(${i})">
+                        <option value="">-- wählen --</option>
+                        ${shuffled.map(o => `<option value="${o}">${o}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="feedback-icon" id="icon-${i}"></div>
+            `;
+            cartContainer.appendChild(row);
+        });
+    }
+
+    function checkEntry(idx) {
+        const select = document.getElementById(`sel-${idx}`);
+        const row = document.getElementById(`row-${idx}`);
+        const icon = document.getElementById(`icon-${idx}`);
+        const val = select.value;
+
+        if (val === "") {
+            row.className = 'cart-item';
+            icon.textContent = '';
+        } else if (val === data[idx].correct) {
+            row.className = 'cart-item item-correct';
+            icon.textContent = '✓';
+            icon.style.color = 'var(--success)';
+        } else {
+            row.className = 'cart-item item-wrong';
+            icon.textContent = '✕';
+            icon.style.color = 'var(--error)';
+        }
+        updateProgress();
+    }
+
+    function updateProgress() {
+        const corrects = document.querySelectorAll('.item-correct').length;
+        document.getElementById('progress-text').textContent = `${corrects} / 10 erledigt`;
+        
+        if (corrects === data.length) {
+            document.getElementById('final-message').textContent = "🎉 Alles perfekt eingekauft!";
+        }
+    }
+
+    function showAllSolutions() {
+        data.forEach((item, i) => {
+            const select = document.getElementById(`sel-${i}`);
+            select.value = item.correct;
+            checkEntry(i);
+        });
+    }
+
+    restartGame();
+</script>
+
+</body>
+</html>
