@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch Übung: Zahlwort-Baukasten</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+            --success-color: #27ae60;
+            --error-color: #e74c3c;
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--primary-color);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 650px;
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            margin-bottom: 25px;
+        }
+
+        #progress-fill {
+            height: 100%;
+            background: var(--accent-color);
+            width: 0%;
+            transition: width 0.3s;
+            border-radius: 4px;
+        }
+
+        /* Anzeige-Bereich */
+        .goal-display {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            font-weight: bold;
+        }
+
+        .construction-area {
+            min-height: 60px;
+            border: 2px dashed var(--accent-color);
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+        }
+
+        .word-brick {
+            background: var(--accent-color);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 5px;
+            font-weight: bold;
+            animation: pop 0.2s ease-out;
+        }
+
+        @keyframes pop {
+            0% { transform: scale(0.8); }
+            100% { transform: scale(1); }
+        }
+
+        /* Buttons */
+        .grid-label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 10px;
+            text-align: left;
+        }
+
+        .button-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .brick-btn {
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        .brick-btn:hover:not(:disabled) {
+            border-color: var(--accent-color);
+            background: #f0f7ff;
+        }
+
+        .brick-btn:disabled {
+            opacity: 0.5;
+            cursor: default;
+        }
+
+        .noun-btn {
+            background-color: #fcf3cf;
+            border-color: #f1c40f;
+        }
+
+        .correct { background-color: var(--success-color) !important; color: white !important; }
+        .wrong { background-color: var(--error-color) !important; color: white !important; }
+
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .action-btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            color: white;
+        }
+
+        #clear-btn { background-color: #e67e22; }
+        #solve-btn { background-color: #7f8c8d; }
+        #next-btn { background-color: var(--success-color); display: none; }
+
+        #feedback {
+            margin: 15px 0;
+            font-weight: bold;
+            min-height: 24px;
+        }
+
+        #result-screen { display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="container" id="quiz-ui">
+        <h1>Zahlwort-Baukasten</h1>
+        <div class="progress-bar"><div id="progress-fill"></div></div>
+
+        <div class="goal-display" id="goal-text">
+            Bilde die Zahl: 42 (Gegenstand: стул)
+        </div>
+
+        <div class="construction-area" id="construction-area">
+            <!-- Hier erscheinen die gewählten Wörter -->
+        </div>
+
+        <div id="feedback"></div>
+
+        <div id="step-1">
+            <div class="grid-label">Schritt 1: Wähle die Zahlwörter</div>
+            <div class="button-grid" id="number-bricks"></div>
+        </div>
+
+        <div id="step-2" style="display:none;">
+            <div class="grid-label">Schritt 2: Wähle die richtige Form des Substantivs</div>
+            <div class="button-grid" id="noun-bricks"></div>
+        </div>
+
+        <div class="controls">
+            <button id="clear-btn" class="action-btn" onclick="clearConstruction()">Löschen</button>
+            <button id="solve-btn" class="action-btn" onclick="showSolution()">Lösung</button>
+            <button id="next-btn" class="action-btn" onclick="nextQuestion()">Weiter</button>
+        </div>
+    </div>
+
+    <div class="container" id="result-screen">
+        <h1>Ergebnis</h1>
+        <p>Du hast den Baukasten erfolgreich gemeistert!</p>
+        <div style="font-size: 3rem; color: var(--accent-color); margin: 20px 0;" id="score-display">0 / 6</div>
+        <button class="action-btn" style="background-color: var(--primary-color);" onclick="location.reload()">Neu starten</button>
+    </div>
+
+    <script>
+        const quizData = [
+            { 
+                target: "21", nounNom: "книга", 
+                numParts: ["двадцать", "одна"], 
+                nounCorrect: "книга",
+                optionsNum: ["двадцать", "тридцать", "один", "одна", "одно"],
+                optionsNoun: ["книга", "книги", "книг"]
+            },
+            { 
+                target: "42", nounNom: "стул", 
+                numParts: ["сорок", "два"], 
+                nounCorrect: "стула",
+                optionsNum: ["сорок", "пятьдесят", "два", "две"],
+                optionsNoun: ["стул", "стула", "стульев"]
+            },
+            { 
+                target: "11", nounNom: "окно", 
+                numParts: ["одиннадцать"], 
+                nounCorrect: "окон",
+                optionsNum: ["десять", "одиннадцать", "один"],
+                optionsNoun: ["окно", "окна", "окон"]
+            },
+            { 
+                target: "54", nounNom: "урок", 
+                numParts: ["пятьдесят", "четыре"], 
+                nounCorrect: "урока",
+                optionsNum: ["сорок", "пятьдесят", "четыре", "четырнадцать"],
+                optionsNoun: ["урок", "урока", "уроков"]
+            },
+            { 
+                target: "35", nounNom: "ручка", 
+                numParts: ["тридцать", "пять"], 
+                nounCorrect: "ручек",
+                optionsNum: ["двадцать", "тридцать", "пять", "пятнадцать"],
+                optionsNoun: ["ручка", "ручки", "ручек"]
+            },
+            { 
+                target: "101", nounNom: "билет", 
+                numParts: ["сто", "один"], 
+                nounCorrect: "билет",
+                optionsNum: ["сто", "двести", "один", "одна"],
+                optionsNoun: ["билет", "билета", "билетов"]
+            }
+        ];
+
+        let currentIdx = 0;
+        let selectedWords = [];
+        let score = 0;
+        let firstTry = true;
+
+        function loadQuestion() {
+            const data = quizData[currentIdx];
+            selectedWords = [];
+            firstTry = true;
+            
+            document.getElementById('goal-text').textContent = `Bilde die Zahl: ${data.target} (Gegenstand: ${data.nounNom})`;
+            document.getElementById('construction-area').innerHTML = '';
+            document.getElementById('feedback').textContent = '';
+            document.getElementById('feedback').style.color = 'inherit';
+            document.getElementById('step-1').style.display = 'block';
+            document.getElementById('step-2').style.display = 'none';
+            document.getElementById('next-btn').style.display = 'none';
+            document.getElementById('solve-btn').style.display = 'inline-block';
+            document.getElementById('clear-btn').style.display = 'inline-block';
+
+            // Zahlen-Buttons
+            const numGrid = document.getElementById('number-bricks');
+            numGrid.innerHTML = '';
+            data.optionsNum.forEach(word => {
+                const btn = document.createElement('button');
+                btn.className = 'brick-btn';
+                btn.textContent = word;
+                btn.onclick = () => addWord(word);
+                numGrid.appendChild(btn);
+            });
+
+            // Nomen-Buttons
+            const nounGrid = document.getElementById('noun-bricks');
+            nounGrid.innerHTML = '';
+            data.optionsNoun.forEach(word => {
+                const btn = document.createElement('button');
+                btn.className = 'brick-btn noun-btn';
+                btn.textContent = word;
+                btn.onclick = () => checkNoun(word, btn);
+                nounGrid.appendChild(btn);
+            });
+
+            updateProgress();
+        }
+
+        function addWord(word) {
+            selectedWords.push(word);
+            renderConstruction();
+            
+            // Wenn die Anzahl der Wörter erreicht ist, zu Schritt 2
+            if (selectedWords.length === quizData[currentIdx].numParts.length) {
+                // Kurze Prüfung ob die Zahlenwörter stimmen (Reihenfolge ignorieren wir hier für Flexibilität, 
+                // aber der Inhalt muss passen)
+                const correctNums = [...quizData[currentIdx].numParts].sort();
+                const currentNums = [...selectedWords].sort();
+                
+                if (JSON.stringify(correctNums) === JSON.stringify(currentNums)) {
+                    document.getElementById('step-1').style.display = 'none';
+                    document.getElementById('step-2').style.display = 'block';
+                    document.getElementById('feedback').textContent = "Zahl ist korrekt! Wähle nun das Substantiv.";
+                    document.getElementById('feedback').style.color = "var(--accent-color)";
+                } else {
+                    document.getElementById('feedback').textContent = "Die Zahlwörter passen nicht zur Zielzahl.";
+                    document.getElementById('feedback').style.color = "var(--error-color)";
+                    firstTry = false;
+                }
+            }
+        }
+
+        function renderConstruction() {
+            const area = document.getElementById('construction-area');
+            area.innerHTML = '';
+            selectedWords.forEach(word => {
+                const div = document.createElement('div');
+                div.className = 'word-brick';
+                div.textContent = word;
+                area.appendChild(div);
+            });
+        }
+
+        function checkNoun(word, btn) {
+            const data = quizData[currentIdx];
+            if (word === data.nounCorrect) {
+                btn.classList.add('correct');
+                const div = document.createElement('div');
+                div.className = 'word-brick';
+                div.style.backgroundColor = "var(--success-color)";
+                div.textContent = word;
+                document.getElementById('construction-area').appendChild(div);
+                
+                document.getElementById('feedback').textContent = "Perfekt!";
+                document.getElementById('feedback').style.color = "var(--success-color)";
+                if (firstTry) score++;
+                
+                endQuestion();
+            } else {
+                btn.classList.add('wrong');
+                btn.disabled = true;
+                firstTry = false;
+                document.getElementById('feedback').textContent = "Falsche Form! Schau dir das letzte Wort der Zahl an.";
+                document.getElementById('feedback').style.color = "var(--error-color)";
+            }
+        }
+
+        function clearConstruction() {
+            selectedWords = [];
+            renderConstruction();
+            document.getElementById('step-1').style.display = 'block';
+            document.getElementById('step-2').style.display = 'none';
+            document.getElementById('feedback').textContent = '';
+        }
+
+        function showSolution() {
+            const data = quizData[currentIdx];
+            firstTry = false;
+            selectedWords = [...data.numParts];
+            renderConstruction();
+            
+            document.getElementById('step-1').style.display = 'none';
+            document.getElementById('step-2').style.display = 'block';
+            
+            const nounBtns = document.querySelectorAll('.noun-btn');
+            nounBtns.forEach(btn => {
+                if (btn.textContent === data.nounCorrect) {
+                    btn.classList.add('correct');
+                }
+                btn.disabled = true;
+            });
+
+            const div = document.createElement('div');
+            div.className = 'word-brick';
+            div.style.backgroundColor = "var(--success-color)";
+            div.textContent = data.nounCorrect;
+            document.getElementById('construction-area').appendChild(div);
+            
+            endQuestion();
+        }
+
+        function endQuestion() {
+            document.getElementById('next-btn').style.display = 'inline-block';
+            document.getElementById('solve-btn').style.display = 'none';
+            document.getElementById('clear-btn').style.display = 'none';
+            document.querySelectorAll('.brick-btn').forEach(b => b.disabled = true);
+        }
+
+        function nextQuestion() {
+            currentIdx++;
+            if (currentIdx < quizData.length) {
+                loadQuestion();
+            } else {
+                showResults();
+            }
+        }
+
+        function showResults() {
+            document.getElementById('quiz-ui').style.display = 'none';
+            document.getElementById('result-screen').style.display = 'block';
+            document.getElementById('score-display').textContent = `${score} / ${quizData.length}`;
+        }
+
+        function updateProgress() {
+            const percent = (currentIdx / quizData.length) * 100;
+            document.getElementById('progress-fill').style.width = percent + "%";
+        }
+
+        loadQuestion();
+    </script>
+</body>
+</html>
