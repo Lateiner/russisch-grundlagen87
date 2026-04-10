@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Training: Heiß oder Kalt?</title>
+    <style>
+        :root {
+            --cold-blue: #3498db;
+            --hot-red: #e74c3c;
+            --bg-color: #f0f3f5;
+            --card-bg: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: var(--bg-color);
+            transition: background-color 0.5s ease;
+            overflow: hidden;
+        }
+
+        .game-container {
+            width: 90%;
+            max-width: 500px;
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+            position: relative;
+            z-index: 2;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            font-weight: bold;
+            color: #7f8c8d;
+        }
+
+        /* Das Thermometer (Timer) */
+        .timer-container {
+            width: 100%;
+            height: 15px;
+            background: #eee;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            overflow: hidden;
+        }
+
+        #timer-bar {
+            height: 100%;
+            width: 100%;
+            background-color: var(--cold-blue);
+            transition: width 0.1s linear, background-color 0.5s;
+        }
+
+        .question-area {
+            margin-bottom: 30px;
+        }
+
+        #number-display {
+            font-size: 4rem;
+            font-weight: bold;
+            margin: 0;
+            color: var(--primary-color);
+        }
+
+        #noun-display {
+            font-size: 1.5rem;
+            color: #34495e;
+            margin-top: -10px;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+
+        .option-btn {
+            padding: 15px;
+            font-size: 1.2rem;
+            border: 2px solid #ddd;
+            border-radius: 12px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: bold;
+        }
+
+        .option-btn:hover {
+            border-color: var(--cold-blue);
+            background: #f0f7ff;
+        }
+
+        /* Overlay für Feedback */
+        #overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 10;
+            color: white;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .hot-mode {
+            animation: shake 0.5s infinite;
+        }
+
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+
+        .btn-start {
+            padding: 15px 40px;
+            font-size: 1.5rem;
+            background: var(--success-color, #27ae60);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        @media (max-width: 480px) {
+            #number-display { font-size: 3rem; }
+            .option-btn { padding: 12px; font-size: 1.1rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-container" id="game-box">
+        <div class="stats">
+            <span>Punkte: <span id="score">0</span></span>
+            <span id="difficulty">Kalt</span>
+        </div>
+
+        <div class="timer-container">
+            <div id="timer-bar"></div>
+        </div>
+
+        <div class="question-area">
+            <p id="number-display">--</p>
+            <p id="noun-display">Wähle die Form</p>
+        </div>
+
+        <div class="options-grid" id="options">
+            <!-- Buttons werden hier eingefügt -->
+        </div>
+    </div>
+
+    <div id="overlay">
+        <h1 id="status-text">Bist du bereit?</h1>
+        <p id="explanation-text"></p>
+        <button class="btn-start" onclick="startGame()">Start</button>
+    </div>
+
+    <script>
+        const nouns = [
+            { nom: "стул", forms: ["стул", "стула", "стульев"] },
+            { nom: "книга", forms: ["книга", "книги", "книг"] },
+            { nom: "окно", forms: ["окно", "окна", "окон"] },
+            { nom: "яблоко", forms: ["яблоко", "яблока", "яблок"] }
+        ];
+
+        let score = 0;
+        let timeLeft = 100;
+        let timerId = null;
+        let currentCorrect = "";
+        let gameActive = false;
+        let speed = 0.5; // Wie schnell der Timer sinkt
+
+        function getCorrectForm(num, nounObj) {
+            const n = Math.abs(num) % 100;
+            const n1 = n % 10;
+            if (n > 10 && n < 20) return nounObj.forms[2];
+            if (n1 > 1 && n1 < 5) return nounObj.forms[1];
+            if (n1 == 1) return nounObj.forms[0];
+            return nounObj.forms[2];
+        }
+
+        function startGame() {
+            score = 0;
+            speed = 0.5;
+            document.getElementById('score').textContent = score;
+            document.getElementById('overlay').style.display = 'none';
+            gameActive = true;
+            nextQuestion();
+        }
+
+        function nextQuestion() {
+            if (!gameActive) return;
+
+            // Zufällige Zahl, oft nahe an Regelgrenzen (1, 4, 5, 10, 11, 20, 21)
+            const borders = [1, 4, 5, 10, 11, 14, 20, 21, 24, 25];
+            let num;
+            if (Math.random() > 0.5) {
+                num = borders[Math.floor(Math.random() * borders.length)];
+            } else {
+                num = Math.floor(Math.random() * 100);
+            }
+
+            const noun = nouns[Math.floor(Math.random() * nouns.length)];
+            currentCorrect = getCorrectForm(num, noun);
+
+            // UI Update
+            document.getElementById('number-display').textContent = num;
+            document.getElementById('noun-display').textContent = `(Nominativ: ${noun.nom})`;
+            
+            // Hitze-Check: Ist die Zahl eine Grenze?
+            if (borders.includes(num)) {
+                document.body.style.backgroundColor = "#fadbd8";
+                document.getElementById('difficulty').textContent = "HEISS!";
+                document.getElementById('game-box').classList.add('hot-mode');
+                timeLeft = 60; // Weniger Zeit bei schweren Zahlen
+            } else {
+                document.body.style.backgroundColor = "#ebf5fb";
+                document.getElementById('difficulty').textContent = "Kalt";
+                document.getElementById('game-box').classList.remove('hot-mode');
+                timeLeft = 100;
+            }
+
+            // Optionen mischen
+            const optsArea = document.getElementById('options');
+            optsArea.innerHTML = '';
+            [...noun.forms].sort(() => Math.random() - 0.5).forEach(f => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.textContent = f;
+                btn.onclick = () => checkAnswer(f);
+                optsArea.appendChild(btn);
+            });
+
+            startTimer();
+        }
+
+        function startTimer() {
+            clearInterval(timerId);
+            const bar = document.getElementById('timer-bar');
+            
+            timerId = setInterval(() => {
+                timeLeft -= speed;
+                bar.style.width = timeLeft + "%";
+                
+                // Farbe der Bar ändern
+                if (timeLeft > 60) bar.style.backgroundColor = "#3498db";
+                else if (timeLeft > 30) bar.style.backgroundColor = "#f39c12";
+                else bar.style.backgroundColor = "#e74c3c";
+
+                if (timeLeft <= 0) {
+                    gameOver("Zeit abgelaufen!");
+                }
+            }, 50);
+        }
+
+        function checkAnswer(answer) {
+            if (!gameActive) return;
+
+            if (answer === currentCorrect) {
+                score++;
+                speed += 0.05; // Es wird immer schneller
+                document.getElementById('score').textContent = score;
+                nextQuestion();
+            } else {
+                gameOver(`Falsch! Richtig wäre: ${currentCorrect}`);
+            }
+        }
+
+        function gameOver(reason) {
+            gameActive = false;
+            clearInterval(timerId);
+            document.getElementById('overlay').style.display = 'flex';
+            document.getElementById('status-text').textContent = "Game Over";
+            document.getElementById('explanation-text').textContent = `${reason} \n Dein Score: ${score}`;
+            document.body.style.backgroundColor = "#ccc";
+            document.getElementById('game-box').classList.remove('hot-mode');
+        }
+
+        // Init
+        document.getElementById('overlay').style.display = 'flex';
+    </script>
+</body>
+</html>
