@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Trainer: Bild-Rätsel</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+            --success-color: #27ae60;
+            --error-color: #e74c3c;
+            --bg-color: #f1f2f6;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background: white;
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        #progress-fill {
+            height: 100%;
+            background: var(--accent-color);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        /* Das Bilder-Raster */
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+            gap: 10px;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            max-height: 250px;
+            overflow-y: auto;
+            border: 1px solid #eee;
+        }
+
+        .icon-item {
+            font-size: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .question-text {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: var(--primary-color);
+        }
+
+        .quantity-badge {
+            background: var(--primary-color);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 1.5rem;
+            display: inline-block;
+            margin-bottom: 15px;
+        }
+
+        /* Antwort-Buttons */
+        .options-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .option-btn {
+            padding: 16px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            border: 2px solid #ddd;
+            border-radius: 12px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            outline: none;
+        }
+
+        .option-btn:hover:not(:disabled) {
+            border-color: var(--accent-color);
+            background: #f0f7ff;
+        }
+
+        .option-btn.correct {
+            background-color: var(--success-color) !important;
+            border-color: var(--success-color) !important;
+            color: white;
+        }
+
+        .option-btn.wrong {
+            background-color: var(--error-color) !important;
+            border-color: var(--error-color) !important;
+            color: white;
+        }
+
+        .controls {
+            margin-top: 25px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        button.action-btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            color: white;
+        }
+
+        #next-btn { background-color: var(--accent-color); display: none; }
+        #solve-btn { background-color: #7f8c8d; }
+
+        #feedback {
+            margin-top: 15px;
+            font-weight: bold;
+            min-height: 24px;
+        }
+
+        #result-screen { display: none; }
+
+        @media (max-width: 480px) {
+            .option-btn { font-size: 1rem; padding: 12px; }
+            .icon-item { font-size: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container" id="quiz-ui">
+        <div class="progress-bar">
+            <div id="progress-fill"></div>
+        </div>
+
+        <div id="image-grid" class="image-grid">
+            <!-- Icons werden hier eingefügt -->
+        </div>
+
+        <div class="quantity-badge" id="quantity-display">22</div>
+        <div class="question-text">Wie sagt man das auf Russisch?</div>
+
+        <div class="options-container" id="options-area">
+            <!-- Buttons werden hier eingefügt -->
+        </div>
+
+        <div id="feedback"></div>
+
+        <div class="controls">
+            <button id="solve-btn" class="action-btn" onclick="showSolution()">Lösung</button>
+            <button id="next-btn" class="action-btn" onclick="nextQuestion()">Nächste Frage</button>
+        </div>
+    </div>
+
+    <div class="container" id="result-screen">
+        <h1>Ergebnis</h1>
+        <p>Du hast alle Rätsel gelöst!</p>
+        <div style="font-size: 3rem; color: var(--accent-color); margin: 20px 0;" id="score-display">0 / 10</div>
+        <button class="action-btn" style="background-color: var(--primary-color);" onclick="location.reload()">Neu starten</button>
+    </div>
+
+    <script>
+        const quizData = [
+            { count: 22, icon: "🏙️", opts: ["22 город", "22 города", "22 городов"], correct: 1 },
+            { count: 5, icon: "🍎", opts: ["5 яблоко", "5 яблока", "5 яблок"], correct: 2 },
+            { count: 31, icon: "📖", opts: ["31 книга", "31 книги", "31 книг"], correct: 0 },
+            { count: 4, icon: "🐱", opts: ["4 кошка", "4 кошки", "4 кошек"], correct: 1 },
+            { count: 11, icon: "👨‍🎓", opts: ["11 студент", "11 студента", "11 студентов"], correct: 2 },
+            { count: 12, icon: "📚", opts: ["12 книга", "12 книги", "12 книг"], correct: 2 },
+            { count: 3, icon: "🏠", opts: ["3 дом", "3 дома", "3 домов"], correct: 1 },
+            { count: 54, icon: "✍️", opts: ["54 урок", "54 урока", "54 уроков"], correct: 1 },
+            { count: 10, icon: "🚗", opts: ["10 машина", "10 машины", "10 машин"], correct: 2 },
+            { count: 1, icon: "🪑", opts: ["1 стул", "1 стула", "1 стульев"], correct: 0 }
+        ];
+
+        let currentIndex = 0;
+        let score = 0;
+        let answered = false;
+
+        function loadQuestion() {
+            answered = false;
+            const data = quizData[currentIndex];
+            
+            // Grid füllen
+            const grid = document.getElementById('image-grid');
+            grid.innerHTML = '';
+            for (let i = 0; i < data.count; i++) {
+                const span = document.createElement('span');
+                span.className = 'icon-item';
+                span.textContent = data.icon;
+                grid.appendChild(span);
+            }
+
+            document.getElementById('quantity-display').textContent = data.count;
+            document.getElementById('feedback').textContent = '';
+            document.getElementById('next-btn').style.display = 'none';
+            document.getElementById('solve-btn').style.display = 'inline-block';
+
+            // Buttons füllen
+            const optionsArea = document.getElementById('options-area');
+            optionsArea.innerHTML = '';
+            data.opts.forEach((text, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.textContent = text;
+                btn.onclick = () => checkAnswer(index, btn);
+                optionsArea.appendChild(btn);
+            });
+
+            updateProgress();
+        }
+
+        function checkAnswer(idx, btn) {
+            if (answered) return;
+            const data = quizData[currentIndex];
+            answered = true;
+
+            if (idx === data.correct) {
+                btn.classList.add('correct');
+                score++;
+                document.getElementById('feedback').textContent = "Richtig! ✨";
+                document.getElementById('feedback').style.color = "var(--success-color)";
+            } else {
+                btn.classList.add('wrong');
+                document.getElementById('feedback').textContent = "Leider falsch.";
+                document.getElementById('feedback').style.color = "var(--error-color)";
+                // Richtige Lösung markieren
+                document.querySelectorAll('.option-btn')[data.correct].classList.add('correct');
+            }
+
+            document.getElementById('solve-btn').style.display = 'none';
+            document.getElementById('next-btn').style.display = 'inline-block';
+        }
+
+        function showSolution() {
+            if (answered) return;
+            const data = quizData[currentIndex];
+            answered = true;
+            
+            document.querySelectorAll('.option-btn')[data.correct].classList.add('correct');
+            document.getElementById('feedback').textContent = "Lösung wird angezeigt.";
+            document.getElementById('feedback').style.color = "var(--primary-color)";
+            document.getElementById('solve-btn').style.display = 'none';
+            document.getElementById('next-btn').style.display = 'inline-block';
+        }
+
+        function nextQuestion() {
+            currentIndex++;
+            if (currentIndex < quizData.length) {
+                loadQuestion();
+            } else {
+                showResults();
+            }
+        }
+
+        function showResults() {
+            document.getElementById('quiz-ui').style.display = 'none';
+            document.getElementById('result-screen').style.display = 'block';
+            document.getElementById('score-display').textContent = `${score} / ${quizData.length}`;
+        }
+
+        function updateProgress() {
+            const percent = (currentIndex / quizData.length) * 100;
+            document.getElementById('progress-fill').style.width = percent + "%";
+        }
+
+        loadQuestion();
+    </script>
+</body>
+</html>
