@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch Übung: Lückentext Endungen</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+            --success-color: #27ae60;
+            --error-color: #e74c3c;
+            --bg-color: #f9fbff;
+            --card-bg: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--primary-color);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+        }
+
+        h1 { font-size: 1.5rem; text-align: center; margin-bottom: 20px; }
+
+        .instruction {
+            background: #e8f4fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+
+        /* Textbereich */
+        .text-area {
+            font-size: 1.2rem;
+            line-height: 2.2;
+            background: #fff;
+            padding: 20px;
+            border: 1px solid #eee;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            text-align: left;
+        }
+
+        .gap {
+            display: inline-block;
+            min-width: 45px;
+            height: 30px;
+            border-bottom: 2px solid var(--accent-color);
+            background: #f0f0f0;
+            margin: 0 5px;
+            vertical-align: middle;
+            text-align: center;
+            font-weight: bold;
+            color: var(--primary-color);
+            cursor: pointer;
+            border-radius: 4px 4px 0 0;
+            transition: background 0.2s;
+        }
+
+        .gap.active { background: #d6eaf8; border-color: var(--primary-color); }
+        .gap.correct { color: var(--success-color); border-bottom-color: var(--success-color); background: #e8f6e9; }
+        .gap.wrong { color: var(--error-color); border-bottom-color: var(--error-color); background: #fdecea; }
+
+        /* Kachel-Bereich */
+        .tiles-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f1f3f5;
+            border-radius: 10px;
+        }
+
+        .tile {
+            background: white;
+            border: 2px solid var(--accent-color);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s;
+        }
+
+        .tile:hover { background: #f0f7ff; }
+        .tile.selected { background: var(--accent-color); color: white; transform: scale(1.05); }
+        .tile.used { opacity: 0.4; cursor: default; background: #ddd; border-color: #ccc; }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            color: white;
+        }
+
+        .btn-solve { background-color: #7f8c8d; }
+        .btn-reset { background-color: var(--accent-color); }
+
+        #feedback-msg {
+            margin-top: 20px;
+            height: 24px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        @media (max-width: 600px) {
+            .text-area { font-size: 1.1rem; line-height: 2.5; }
+            .tile { padding: 6px 12px; font-size: 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Lückentext: Russische Zahlen</h1>
+    
+    <div class="instruction">
+        Klicke zuerst unten auf eine Endung (Kachel) und dann auf die passende Lücke im Text. <br>
+        Hinweis: Das Symbol <b>-</b> steht für eine Nullendung (keine Endung).
+    </div>
+
+    <div class="text-area" id="text-content">
+        У меня большая семья. У меня есть 2 (два) брат<span class="gap" data-answer="-а"></span> и 3 (три) сестр<span class="gap" data-answer="-ы"></span>. 
+        Вчера мы купили 5 (пять) яблок<span class="gap" data-answer="-"></span> и 2 (два) арбуз<span class="gap" data-answer="-а"></span>. 
+        На столе лежат 21 (двадцать один) журна<span class="gap" data-answer="-"></span>. 
+        В моей сумке 4 (четыре) ручк<span class="gap" data-answer="-и"></span>, а в классе сидят 12 (двенадцать) студент<span class="gap" data-answer="-ов"></span>.
+    </div>
+
+    <div class="tiles-container" id="tiles-area">
+        <!-- Kacheln werden hier gemischt eingefügt -->
+    </div>
+
+    <div id="feedback-msg"></div>
+
+    <div class="controls">
+        <button class="btn-solve" onclick="showSolution()">Lösung anzeigen</button>
+        <button class="btn-reset" onclick="resetGame()">Neu starten</button>
+    </div>
+</div>
+
+<script>
+    const endings = ["-а", "-ы", "-", "-а", "-", "-и", "-ов"];
+    
+    let selectedTile = null;
+
+    function initGame() {
+        const tilesArea = document.getElementById('tiles-area');
+        tilesArea.innerHTML = '';
+        document.getElementById('feedback-msg').textContent = '';
+        
+        // Gaps zurücksetzen
+        const gaps = document.querySelectorAll('.gap');
+        gaps.forEach(gap => {
+            gap.textContent = '';
+            gap.className = 'gap';
+            gap.onclick = () => handleGapClick(gap);
+        });
+
+        // Kacheln mischen
+        const shuffledEndings = [...endings].sort(() => Math.random() - 0.5);
+        
+        shuffledEndings.forEach((end, index) => {
+            const tile = document.createElement('div');
+            tile.className = 'tile';
+            tile.textContent = end;
+            tile.onclick = () => handleTileClick(tile);
+            tilesArea.appendChild(tile);
+        });
+        
+        selectedTile = null;
+    }
+
+    function handleTileClick(tile) {
+        if (tile.classList.contains('used')) return;
+        
+        if (selectedTile) selectedTile.classList.remove('selected');
+        selectedTile = tile;
+        tile.classList.add('selected');
+    }
+
+    function handleGapClick(gap) {
+        if (!selectedTile) {
+            document.getElementById('feedback-msg').textContent = "Wähle zuerst eine Endung aus!";
+            document.getElementById('feedback-msg').style.color = "var(--primary-color)";
+            return;
+        }
+
+        const chosenVal = selectedTile.textContent;
+        const correctVal = gap.getAttribute('data-answer');
+
+        gap.textContent = chosenVal;
+        
+        if (chosenVal === correctVal) {
+            gap.className = 'gap correct';
+            selectedTile.classList.add('used');
+            selectedTile.classList.remove('selected');
+            selectedTile = null;
+            document.getElementById('feedback-msg').textContent = "Richtig!";
+            document.getElementById('feedback-msg').style.color = "var(--success-color)";
+        } else {
+            gap.className = 'gap wrong';
+            document.getElementById('feedback-msg').textContent = "Das passt hier nicht.";
+            document.getElementById('feedback-msg').style.color = "var(--error-color)";
+            setTimeout(() => {
+                gap.textContent = '';
+                gap.className = 'gap';
+            }, 1000);
+        }
+        
+        checkWin();
+    }
+
+    function checkWin() {
+        const gaps = document.querySelectorAll('.gap');
+        const allCorrect = Array.from(gaps).every(g => g.classList.contains('correct'));
+        if (allCorrect) {
+            document.getElementById('feedback-msg').textContent = "Super! Du hast alle Endungen gefunden.";
+            document.getElementById('feedback-msg').style.color = "var(--success-color)";
+        }
+    }
+
+    function showSolution() {
+        const gaps = document.querySelectorAll('.gap');
+        gaps.forEach(gap => {
+            gap.textContent = gap.getAttribute('data-answer');
+            gap.className = 'gap correct';
+        });
+        document.querySelectorAll('.tile').forEach(t => t.classList.add('used'));
+        document.getElementById('feedback-msg').textContent = "Lösung wird angezeigt.";
+        document.getElementById('feedback-msg').style.color = "var(--primary-color)";
+    }
+
+    function resetGame() {
+        initGame();
+    }
+
+    initGame();
+</script>
+
+</body>
+</html>
