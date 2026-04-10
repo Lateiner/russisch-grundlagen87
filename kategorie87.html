@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Trainer: Der Grammatik-Baum</title>
+    <style>
+        :root {
+            --nom-color: #27ae60;
+            --gen-sg-color: #2980b9;
+            --gen-pl-color: #8e44ad;
+            --bg-color: #ecf0f1;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            margin: 0;
+            overflow: hidden;
+            background-color: var(--bg-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            user-select: none;
+            touch-action: manipulation;
+        }
+
+        .header {
+            padding: 15px;
+            text-align: center;
+            z-index: 10;
+            background: rgba(255,255,255,0.8);
+            width: 100%;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        h1 { margin: 0; font-size: 1.2rem; color: #2c3e50; }
+        .score-display { font-weight: bold; font-size: 1.1rem; color: var(--gen-sg-color); }
+
+        /* Spielfeld */
+        #game-canvas {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            flex-grow: 1;
+            overflow: hidden;
+            background: linear-gradient(to bottom, #dff9fb 0%, #ffffff 100%);
+        }
+
+        /* Die fallende Zahl */
+        .falling-number {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background: #f1c40f;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            z-index: 5;
+            transition: top 0.1s linear;
+        }
+
+        /* Die Äste (Buttons am unteren Rand) */
+        .branches-container {
+            display: flex;
+            width: 100%;
+            max-width: 600px;
+            height: 120px;
+            gap: 10px;
+            padding: 10px;
+            box-sizing: border-box;
+            background: #2c3e50;
+        }
+
+        .branch {
+            flex: 1;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.1s, brightness 0.2s;
+            padding: 5px;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+
+        .branch:active { transform: scale(0.95); brightness: 1.2; }
+
+        .branch-nom { background-color: var(--nom-color); }
+        .branch-gen-sg { background-color: var(--gen-sg-color); }
+        .branch-gen-pl { background-color: var(--gen-pl-color); }
+
+        .branch span { display: block; margin-top: 5px; font-size: 0.75rem; opacity: 0.9; }
+
+        /* Start / Game Over Overlay */
+        #overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(44, 62, 80, 0.9);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+            text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .btn-play {
+            padding: 15px 40px;
+            background: var(--nom-color);
+            color: white;
+            border: none;
+            border-radius: 30px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 400px) {
+            .branch { font-size: 0.75rem; }
+            .falling-number { width: 50px; height: 50px; font-size: 1.2rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Der Grammatik-Baum</h1>
+        <div class="score-display">Punkte: <span id="score">0</span></div>
+    </div>
+
+    <div id="game-canvas">
+        <!-- Hier erscheint die fallende Zahl -->
+    </div>
+
+    <div class="branches-container">
+        <div class="branch branch-nom" onclick="handleInput('nom')">
+            Nominativ Sg.
+            <span>(wie Zahl 1)</span>
+        </div>
+        <div class="branch branch-gen-sg" onclick="handleInput('gen-sg')">
+            Genitiv Sg.
+            <span>(wie Zahl 2, 3, 4)</span>
+        </div>
+        <div class="branch branch-gen-pl" onclick="handleInput('gen-pl')">
+            Genitiv Pl.
+            <span>(wie Zahl 5-20)</span>
+        </div>
+    </div>
+
+    <div id="overlay">
+        <h2 id="overlay-title">Bist du bereit?</h2>
+        <p id="overlay-msg">Ordne die fallenden Zahlen dem richtigen Ast zu, bevor sie den Boden berühren!</p>
+        <button class="btn-play" onclick="startGame()">Spiel starten</button>
+    </div>
+
+    <script>
+        let score = 0;
+        let gameActive = false;
+        let currentNumber = null;
+        let fallInterval = null;
+        let fallSpeed = 2;
+        let posY = 0;
+
+        const canvas = document.getElementById('game-canvas');
+        const scoreEl = document.getElementById('score');
+        const overlay = document.getElementById('overlay');
+
+        function startGame() {
+            score = 0;
+            fallSpeed = 2;
+            scoreEl.textContent = score;
+            overlay.style.display = 'none';
+            gameActive = true;
+            spawnNumber();
+        }
+
+        function spawnNumber() {
+            if (!gameActive) return;
+
+            // Zufällige Zahl generieren
+            const numPool = [1, 2, 3, 4, 5, 10, 11, 12, 14, 21, 22, 25, 30, 44, 101];
+            const val = numPool[Math.floor(Math.random() * numPool.length)];
+            
+            // Element erstellen
+            currentNumber = document.createElement('div');
+            currentNumber.className = 'falling-number';
+            currentNumber.textContent = val;
+            currentNumber.dataset.value = val;
+            
+            // Zufällige horizontale Position
+            const maxX = canvas.clientWidth - 70;
+            currentNumber.style.left = Math.random() * maxX + 5 + "px";
+            currentNumber.style.top = "0px";
+            
+            canvas.appendChild(currentNumber);
+            posY = 0;
+
+            // Fall-Animation
+            clearInterval(fallInterval);
+            fallInterval = setInterval(() => {
+                posY += fallSpeed;
+                currentNumber.style.top = posY + "px";
+
+                if (posY > canvas.clientHeight - 60) {
+                    gameOver("Die Zahl hat den Boden berührt!");
+                }
+            }, 20);
+        }
+
+        function handleInput(category) {
+            if (!gameActive || !currentNumber) return;
+
+            const val = parseInt(currentNumber.dataset.value);
+            const correctCategory = getCategory(val);
+
+            if (category === correctCategory) {
+                // Richtig!
+                score++;
+                scoreEl.textContent = score;
+                fallSpeed += 0.1; // Schwierigkeit steigern
+                removeNumber();
+                spawnNumber();
+            } else {
+                // Falsch!
+                gameOver(`Falsch! Die Zahl ${val} gehört nicht in diese Kategorie.`);
+            }
+        }
+
+        function getCategory(num) {
+            const n = Math.abs(num) % 100;
+            const n1 = n % 10;
+            
+            // Ausnahmen 11-14
+            if (n >= 11 && n <= 14) return 'gen-pl';
+            // Endung 1
+            if (n1 === 1) return 'nom';
+            // Endung 2, 3, 4
+            if (n1 >= 2 && n1 <= 4) return 'gen-sg';
+            // Rest (0, 5-9)
+            return 'gen-pl';
+        }
+
+        function removeNumber() {
+            if (currentNumber && currentNumber.parentNode) {
+                currentNumber.parentNode.removeChild(currentNumber);
+            }
+            clearInterval(fallInterval);
+        }
+
+        function gameOver(msg) {
+            gameActive = false;
+            removeNumber();
+            overlay.style.display = 'flex';
+            document.getElementById('overlay-title').textContent = "Game Over!";
+            document.getElementById('overlay-msg').innerHTML = `${msg}<br>Dein Punktestand: <b>${score}</b>`;
+            document.querySelector('.btn-play').textContent = "Erneut versuchen";
+        }
+
+        // Handle Window Resize
+        window.onresize = () => {
+            if (gameActive) gameOver("Fenstergröße geändert.");
+        };
+
+    </script>
+</body>
+</html>
