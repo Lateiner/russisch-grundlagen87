@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Trainer: Das Rad der Zahlen</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #e67e22;
+            --success-color: #27ae60;
+            --error-color: #e74c3c;
+            --wheel-color-1: #3498db;
+            --wheel-color-2: #2980b9;
+            --bg-color: #f4f7f6;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            background: white;
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        h1 { font-size: 1.4rem; color: var(--primary-color); margin-bottom: 20px; }
+
+        /* Das Glücksrad */
+        .wheel-container {
+            position: relative;
+            width: 260px;
+            height: 260px;
+            margin: 0 auto 30px auto;
+        }
+
+        .wheel {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 8px solid var(--primary-color);
+            position: relative;
+            overflow: hidden;
+            transition: transform 3s cubic-bezier(0.15, 0, 0.15, 1);
+            background: conic-gradient(
+                var(--wheel-color-1) 0% 12.5%, var(--wheel-color-2) 12.5% 25%,
+                var(--wheel-color-1) 25% 37.5%, var(--wheel-color-2) 37.5% 50%,
+                var(--wheel-color-1) 50% 62.5%, var(--wheel-color-2) 62.5% 75%,
+                var(--wheel-color-1) 75% 87.5%, var(--wheel-color-2) 87.5% 100%
+            );
+        }
+
+        /* Der Stopper oben */
+        .pointer {
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 30px;
+            height: 40px;
+            background: var(--error-color);
+            clip-path: polygon(50% 100%, 0 0, 100% 0);
+            z-index: 10;
+        }
+
+        .wheel-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80px;
+            height: 80px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: bold;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+            z-index: 5;
+        }
+
+        /* Buttons */
+        .options-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 20px;
+            display: none; /* Erst nach dem Drehen einblenden */
+        }
+
+        .option-btn {
+            padding: 14px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            border: 2px solid #ddd;
+            border-radius: 12px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .option-btn:hover:not(:disabled) {
+            border-color: var(--wheel-color-1);
+            background: #f0f7ff;
+        }
+
+        .option-btn.correct { background-color: var(--success-color) !important; color: white; border-color: var(--success-color); }
+        .option-btn.wrong { background-color: var(--error-color) !important; color: white; border-color: var(--error-color); }
+
+        .spin-btn {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 30px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #d35400;
+            transition: transform 0.1s;
+        }
+
+        .spin-btn:active { transform: translateY(4px); box-shadow: none; }
+        .spin-btn:disabled { background-color: #ccc; box-shadow: none; cursor: default; }
+
+        #feedback {
+            margin-top: 15px;
+            font-weight: bold;
+            min-height: 24px;
+        }
+
+        @media (max-width: 480px) {
+            .wheel-container { width: 220px; height: 220px; }
+            .option-btn { font-size: 1.1rem; padding: 12px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Das Rad der Zahlen</h1>
+        
+        <div class="wheel-container">
+            <div class="pointer"></div>
+            <div class="wheel" id="wheel"></div>
+            <div class="wheel-center" id="number-display">?</div>
+        </div>
+
+        <button class="spin-btn" id="spin-btn" onclick="spinWheel()">RAD DREHEN</button>
+
+        <div id="feedback"></div>
+
+        <div class="options-container" id="options-area">
+            <!-- Buttons werden hier eingefügt -->
+        </div>
+    </div>
+
+    <script>
+        const nouns = [
+            { nom: "стул", forms: ["стул", "стула", "стульев"] },
+            { nom: "книга", forms: ["книга", "книги", "книг"] },
+            { nom: "окно", forms: ["окно", "окна", "окон"] },
+            { nom: "яблоко", forms: ["яблоко", "яблока", "яблок"] },
+            { nom: "город", forms: ["город", "города", "городов"] }
+        ];
+
+        let currentNumber = 0;
+        let currentNoun = null;
+        let isSpinning = false;
+        let rotation = 0;
+
+        function spinWheel() {
+            if (isSpinning) return;
+            
+            isSpinning = true;
+            document.getElementById('spin-btn').disabled = true;
+            document.getElementById('options-area').style.display = 'none';
+            document.getElementById('feedback').textContent = '';
+            document.getElementById('number-display').textContent = "...";
+
+            // Zufällige Rotation (mindestens 3 volle Umdrehungen + zufällig)
+            const extraDegree = Math.floor(Math.random() * 360);
+            rotation += 1080 + extraDegree; 
+            document.getElementById('wheel').style.transform = `rotate(${rotation}deg)`;
+
+            // Nach der Animation (3s)
+            setTimeout(() => {
+                isSpinning = false;
+                finalizeResult();
+            }, 3000);
+        }
+
+        function finalizeResult() {
+            // Zufällige Zahl 1-100
+            currentNumber = Math.floor(Math.random() * 100) + 1;
+            currentNoun = nouns[Math.floor(Math.random() * nouns.length)];
+            
+            document.getElementById('number-display').textContent = currentNumber;
+            document.getElementById('feedback').textContent = `Wähle die richtige Form für "${currentNoun.nom}"`;
+            document.getElementById('feedback').style.color = "var(--primary-color)";
+
+            const optionsArea = document.getElementById('options-area');
+            optionsArea.innerHTML = '';
+            optionsArea.style.display = 'flex';
+
+            // Buttons erstellen
+            currentNoun.forms.forEach((formText, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.textContent = `${currentNumber} ${formText}`;
+                btn.onclick = () => checkAnswer(index, btn);
+                optionsArea.appendChild(btn);
+            });
+        }
+
+        function checkAnswer(selectedIndex, btn) {
+            const correctIndex = getCorrectRuleIndex(currentNumber);
+            const buttons = document.querySelectorAll('.option-btn');
+            
+            if (selectedIndex === correctIndex) {
+                btn.classList.add('correct');
+                document.getElementById('feedback').textContent = "Richtig! ✨";
+                document.getElementById('feedback').style.color = "var(--success-color)";
+            } else {
+                btn.classList.add('wrong');
+                buttons[correctIndex].classList.add('correct');
+                document.getElementById('feedback').textContent = "Leider falsch.";
+                document.getElementById('feedback').style.color = "var(--error-color)";
+            }
+
+            // Buttons deaktivieren
+            buttons.forEach(b => b.disabled = true);
+            document.getElementById('spin-btn').disabled = false;
+            document.getElementById('spin-btn').textContent = "ERNEUT DREHEN";
+        }
+
+        function getCorrectRuleIndex(n) {
+            const n100 = n % 100;
+            const n10 = n % 10;
+            
+            // Regel für 11-14 (Genitiv Plural)
+            if (n100 >= 11 && n100 <= 14) return 2;
+            // Regel für 1 (Nominativ Singular)
+            if (n10 === 1) return 0;
+            // Regel für 2, 3, 4 (Genitiv Singular)
+            if (n10 >= 2 && n10 <= 4) return 1;
+            // Alles andere (Genitiv Plural)
+            return 2;
+        }
+    </script>
+</body>
+</html>
